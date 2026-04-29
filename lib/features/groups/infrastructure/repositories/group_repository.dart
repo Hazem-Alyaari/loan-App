@@ -61,11 +61,13 @@ class GroupRepository implements IGroupRepository {
     return _groupsRef
         .where('memberIds', arrayContains: userId)
         .where('isArchived', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => GroupModel.fromFirestore(doc))
-            .toList());
+        .map((snapshot) {
+      final groups =
+          snapshot.docs.map((doc) => GroupModel.fromFirestore(doc)).toList();
+      groups.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return groups;
+    });
   }
 
   @override

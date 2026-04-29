@@ -24,7 +24,6 @@ class _CreateTransactionScreenState
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   TransactionType _type = TransactionType.loan;
-  String? _creditorId;
   String? _debtorId;
 
   @override
@@ -40,20 +39,6 @@ class _CreateTransactionScreenState
     final groupAsync = ref.watch(groupDetailProvider(widget.groupId));
     final controllerState = ref.watch(transactionControllerProvider);
     final isLoading = controllerState is AsyncLoading;
-
-    ref.listen<AsyncValue<void>>(transactionControllerProvider, (_, state) {
-      if (state is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(state.error.toString()),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-      if (state is AsyncData && state != const AsyncData<void>(null)) {
-        context.pop();
-      }
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -73,6 +58,22 @@ class _CreateTransactionScreenState
         ),
         child: membersAsync.when(
           data: (members) {
+            final currentUser = ref.watch(authStateProvider).value;
+            if (currentUser == null) {
+              return const Center(
+                child: Text(
+                  'المستخدم غير مسجل الدخول',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              );
+            }
+            final currentMember =
+                members.where((m) => m.userId == currentUser.uid).firstOrNull;
+            final currentUserName =
+                currentMember?.userName ?? currentUser.displayName ?? 'أنا';
+            final selectableDebtors =
+                members.where((m) => m.userId != currentUser.uid).toList();
+
             return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Form(
@@ -169,11 +170,19 @@ class _CreateTransactionScreenState
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'المبلغ مطلوب';
                         final amount = double.tryParse(v);
-                        if (amount == null || amount <= 0) {
+                        if (amount == null || amount == 0) {
                           return 'أدخل مبلغا صحيحا';
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'إذا كان المبلغ سالبا سيتم عكس الدائن والمدين تلقائيا',
+                      style: TextStyle(
+                        color: AppColors.textHint,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 28),
 
@@ -181,11 +190,17 @@ class _CreateTransactionScreenState
                     Text('الدائن (المقرض)',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
-                    _MemberDropdown(
-                      members: members,
-                      value: _creditorId,
-                      hint: 'اختر الدائن',
-                      onChanged: (v) => setState(() => _creditorId = v),
+                    TextFormField(
+                      enabled: false,
+                      initialValue: currentUserName,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'الدائن الحالي',
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: AppColors.textHint,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 28),
 
@@ -194,7 +209,7 @@ class _CreateTransactionScreenState
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     _MemberDropdown(
-                      members: members,
+                      members: selectableDebtors,
                       value: _debtorId,
                       hint: 'اختر المدين',
                       onChanged: (v) => setState(() => _debtorId = v),
@@ -223,8 +238,12 @@ class _CreateTransactionScreenState
                       isLoading: isLoading,
                       onPressed: isLoading
                           ? null
-                          : () => _handleCreate(
-                                groupAsync.value?.currencyCode ?? 'USD'),
+                          : () async => _handleCreate(
+                                groupAsync.value?.currencyCode ?? 'USD',
+                                currentUser.uid,
+                                currentUserName,
+                                members,
+                              ),
                     ),
                   ],
                 ),
@@ -240,33 +259,44 @@ class _CreateTransactionScreenState
     );
   }
 
-  void _handleCreate(String currency) {
+  Future<void> _handleCreate(
+    String currency,
+    String currentUserId,
+    String currentUserName,
+    List members,
+  ) async {
     if (!_formKey.currentState!.validate()) return;
-    if (_creditorId == null || _debtorId == null) {
+    if (_debtorId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('يرجى اختيار كل من الدائن والمدين'),
+          content: Text('يرجى اختيار المدين'),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
-    if (_creditorId == _debtorId) {
+    if (_debtorId == currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('لا يمكن أن يكون الدائن والمدين نفس الشخص'),
+          content: Text('لا يمكن اختيار نفسك كمدين'),
           backgroundColor: AppColors.error,
         ),
       );
       return;
     }
+
+    final selectedMember = members.where((m) => m.userId == _debtorId).firstOrNull;
+    final selectedName = selectedMember?.userName ?? selectedMember?.userId ?? '';
+    final rawAmount = double.parse(_amountController.text.trim());
+    final amount = rawAmount.abs();
+    final isPositive = rawAmount > 0;
+    final creditorId = isPositive ? currentUserId : _debtorId!;
+    final debtorId = isPositive ? _debtorId! : currentUserId;
+    final creditorName = isPositive ? currentUserName : selectedName;
+    final debtorName = isPositive ? selectedName : currentUserName;
 
     final user = ref.read(authStateProvider).value;
     if (user == null) return;
-
-    final members = ref.read(groupMembersProvider(widget.groupId)).value ?? [];
-    final creditorMember = members.where((m) => m.userId == _creditorId).firstOrNull;
-    final debtorMember = members.where((m) => m.userId == _debtorId).firstOrNull;
 
     final txId = DateTime.now().millisecondsSinceEpoch.toString();
     final transaction = TransactionModel(
@@ -275,20 +305,34 @@ class _CreateTransactionScreenState
       createdByUserId: user.uid,
       type: _type,
       status: TransactionStatus.pending,
-      creditorUserId: _creditorId!,
-      debtorUserId: _debtorId!,
-      amount: double.parse(_amountController.text),
+      creditorUserId: creditorId,
+      debtorUserId: debtorId,
+      amount: amount,
       currency: currency,
       note: _noteController.text.trim(),
       createdAt: DateTime.now(),
-      creditorName: creditorMember?.userName,
-      debtorName: debtorMember?.userName,
+      creditorName: creditorName,
+      debtorName: debtorName,
       createdByName: user.displayName,
     );
 
-    ref
+    await ref
         .read(transactionControllerProvider.notifier)
         .createTransaction(transaction);
+
+    if (!mounted) return;
+    final state = ref.read(transactionControllerProvider);
+    if (state.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(state.error.toString()),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    context.pop(true);
   }
 }
 

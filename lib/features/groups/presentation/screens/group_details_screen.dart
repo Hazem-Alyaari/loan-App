@@ -5,6 +5,7 @@ import 'package:loan/core/enums/enums.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/core/widgets/status_badge.dart';
+import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/groups/application/providers/group_providers.dart';
 import 'package:loan/features/transactions/application/providers/transaction_providers.dart';
 
@@ -135,8 +136,19 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () =>
-            context.push('/groups/${widget.groupId}/create-transaction'),
+        onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          final created = await context.push<bool>(
+            '/groups/${widget.groupId}/create-transaction',
+          );
+          if (created == true && mounted) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('تمت إضافة المعاملة بنجاح'),
+              ),
+            );
+          }
+        },
         icon: const Icon(Icons.add_rounded),
         label: const Text('معاملة جديدة'),
       ),
@@ -151,87 +163,182 @@ class _BalancesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final groupAsync = ref.watch(groupDetailProvider(groupId));
+    final authUser = ref.watch(authStateProvider).value;
+    final txAsync = ref.watch(groupTransactionsProvider(groupId));
     final membersAsync = ref.watch(groupMembersProvider(groupId));
+    final groupAsync = ref.watch(groupDetailProvider(groupId));
 
-    return groupAsync.when(
-      data: (group) {
-        final balances = group.balances;
-        if (balances.isEmpty) {
-          return const Center(
-            child: Text('لا توجد أرصدة بعد',
-                style: TextStyle(color: AppColors.textHint)),
-          );
-        }
+    if (authUser == null) {
+      return const Center(
+        child: Text('المستخدم غير مسجل الدخول',
+            style: TextStyle(color: AppColors.textHint)),
+      );
+    }
 
-        // Build name map from members
-        final members = membersAsync.value ?? [];
-        final nameMap = <String, String>{};
-        for (final m in members) {
-          nameMap[m.userId] = m.userName ?? m.userEmail ?? m.userId;
-        }
+    if (groupAsync.isLoading || membersAsync.isLoading || txAsync.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
 
-        final entries = balances.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+    if (groupAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${groupAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (membersAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${membersAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (txAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${txAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          itemCount: entries.length,
-          itemBuilder: (context, index) {
-            final entry = entries[index];
-            final isPositive = entry.value >= 0;
+    final group = groupAsync.value!;
+    final members = membersAsync.value ?? [];
+    final transactions = txAsync.value ?? [];
 
-            return GlassCard(
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: (isPositive ? AppColors.success : AppColors.error)
-                          .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isPositive
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      color: isPositive ? AppColors.success : AppColors.error,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      nameMap[entry.key] ?? entry.key,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${isPositive ? '+' : ''}${entry.value.toStringAsFixed(2)} ${group.currencyCode}',
-                    style: TextStyle(
-                      color: isPositive ? AppColors.success : AppColors.error,
-                      fontSize: 16,
+    final memberNameMap = <String, String>{};
+    for (final member in members) {
+      memberNameMap[member.userId] = member.userName ?? member.userId;
+    }
+
+    final summaryByUser = <String, _BalanceSummary>{};
+    for (final member in members) {
+      summaryByUser[member.userId] = const _BalanceSummary();
+    }
+
+    for (final tx in transactions) {
+      if (tx.status != TransactionStatus.approved) continue;
+      final creditor = summaryByUser[tx.creditorUserId] ?? const _BalanceSummary();
+      final debtor = summaryByUser[tx.debtorUserId] ?? const _BalanceSummary();
+      summaryByUser[tx.creditorUserId] =
+          creditor.copyWith(receivable: creditor.receivable + tx.amount);
+      summaryByUser[tx.debtorUserId] =
+          debtor.copyWith(payable: debtor.payable + tx.amount);
+    }
+
+    final me = summaryByUser[authUser.uid] ?? const _BalanceSummary();
+    final myNet = me.net;
+    final entries = summaryByUser.entries.toList()
+      ..sort((a, b) => b.value.net.compareTo(a.value.net));
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      children: [
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'رصيدي',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'عرض رصيدك الحالي فقط',
+                style: const TextStyle(color: AppColors.textHint, fontSize: 12),
+              ),
+              const SizedBox(height: 14),
+              _balanceLine(
+                title: 'لك على الناس',
+                value: me.receivable,
+                currency: group.currencyCode,
+                color: AppColors.success,
+              ),
+              const SizedBox(height: 8),
+              _balanceLine(
+                title: 'عليك للناس',
+                value: me.payable,
+                currency: group.currencyCode,
+                color: AppColors.error,
+              ),
+              const Divider(height: 24, color: Color(0xFF2A2A45)),
+              _balanceLine(
+                title: 'الصافي',
+                value: myNet,
+                currency: group.currencyCode,
+                color: myNet >= 0 ? AppColors.success : AppColors.error,
+                signed: true,
+              ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(18, 8, 18, 4),
+          child: Text(
+            'تفصيل الرصيد حسب الشخص',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        for (final entry in entries)
+          GlassCard(
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.2),
+                  child: Text(
+                    (memberNameMap[entry.key] ?? entry.key)
+                        .substring(0, 1)
+                        .toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
-      error: (e, _) => Center(
-        child: Text('خطأ: $e',
-            style: const TextStyle(color: AppColors.textSecondary)),
-      ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        memberNameMap[entry.key] ?? entry.key,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'له: ${entry.value.receivable.toStringAsFixed(2)} • عليه: ${entry.value.payable.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${entry.value.net >= 0 ? '+' : ''}${entry.value.net.toStringAsFixed(2)} ${group.currencyCode}',
+                  style: TextStyle(
+                    color: entry.value.net >= 0
+                        ? AppColors.success
+                        : AppColors.error,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
@@ -377,110 +484,120 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
   @override
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
+    final authUser = ref.watch(authStateProvider).value;
     final controllerState = ref.watch(groupControllerProvider);
     final isAdding = controllerState is AsyncLoading;
 
     return membersAsync.when(
       data: (members) {
+        final currentRole = members
+            .where((m) => m.userId == authUser?.uid)
+            .map((m) => m.role)
+            .firstOrNull;
+        final canManageMembers =
+            currentRole == MemberRole.owner || currentRole == MemberRole.admin;
+
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _nameController,
-                    style: const TextStyle(color: AppColors.textPrimary),
-                    decoration: const InputDecoration(
-                      hintText: 'اسم العضو',
-                      prefixIcon: Icon(
-                        Icons.person_outline,
-                        color: AppColors.textHint,
+            if (canManageMembers)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      style: const TextStyle(color: AppColors.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'اسم العضو',
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: AppColors.textHint,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          style: const TextStyle(color: AppColors.textPrimary),
-                          decoration: const InputDecoration(
-                            hintText: 'إضافة عضو برقم الهاتف',
-                            prefixIcon: Icon(
-                              Icons.phone_outlined,
-                              color: AppColors.textHint,
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            style: const TextStyle(color: AppColors.textPrimary),
+                            decoration: const InputDecoration(
+                              hintText: 'إضافة عضو برقم الهاتف',
+                              prefixIcon: Icon(
+                                Icons.phone_outlined,
+                                color: AppColors.textHint,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      FilledButton(
-                        onPressed: isAdding
-                            ? null
-                            : () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                final name = _nameController.text.trim();
-                                final phone = _phoneController.text.trim();
-                                if (name.isEmpty) {
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('اسم العضو مطلوب'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                if (phone.isEmpty) {
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('رقم الهاتف مطلوب'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                try {
-                                  await ref
-                                      .read(groupControllerProvider.notifier)
-                                      .addMemberByPhone(
-                                        groupId: widget.groupId,
-                                        fullName: name,
-                                        phoneNumber: phone,
-                                      );
-                                  _nameController.clear();
-                                  _phoneController.clear();
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'تمت إضافة العضو. كلمة المرور الافتراضية: 12345678',
+                        const SizedBox(width: 10),
+                        FilledButton(
+                          onPressed: isAdding
+                              ? null
+                              : () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final name = _nameController.text.trim();
+                                  final phone = _phoneController.text.trim();
+                                  if (name.isEmpty) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text('اسم العضو مطلوب'),
+                                        backgroundColor: AppColors.error,
                                       ),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text(e.toString()),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              },
-                        child: isAdding
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('إضافة'),
-                      ),
-                    ],
-                  ),
-                ],
+                                    );
+                                    return;
+                                  }
+                                  if (phone.isEmpty) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text('رقم الهاتف مطلوب'),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  try {
+                                    await ref
+                                        .read(groupControllerProvider.notifier)
+                                        .addMemberByPhone(
+                                          groupId: widget.groupId,
+                                          fullName: name,
+                                          phoneNumber: phone,
+                                        );
+                                    _nameController.clear();
+                                    _phoneController.clear();
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'تمت إضافة العضو. كلمة المرور الافتراضية: 12345678',
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(e.toString()),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                  }
+                                },
+                          child: isAdding
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('إضافة'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
             Expanded(
               child: members.isEmpty
                   ? const Center(
@@ -597,4 +714,59 @@ String _transactionTypeLabel(TransactionType type) {
     TransactionType.repayment => 'سداد',
     TransactionType.correction => 'تصحيح',
   };
+}
+
+class _BalanceSummary {
+  final double receivable;
+  final double payable;
+
+  const _BalanceSummary({
+    this.receivable = 0,
+    this.payable = 0,
+  });
+
+  double get net => receivable - payable;
+
+  _BalanceSummary copyWith({
+    double? receivable,
+    double? payable,
+  }) {
+    return _BalanceSummary(
+      receivable: receivable ?? this.receivable,
+      payable: payable ?? this.payable,
+    );
+  }
+}
+
+Widget _balanceLine({
+  required String title,
+  required double value,
+  required String currency,
+  required Color color,
+  bool signed = false,
+}) {
+  final display = signed
+      ? '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)} $currency'
+      : '${value.toStringAsFixed(2)} $currency';
+  return Row(
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+      ),
+      Text(
+        display,
+        style: TextStyle(
+          color: color,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
 }
