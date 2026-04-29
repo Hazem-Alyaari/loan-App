@@ -1,5 +1,6 @@
 import 'package:loan/features/groups/domain/models/group_model.dart';
 import 'package:loan/features/groups/domain/models/group_member.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Contract for group management operations.
 abstract class IGroupRepository {
@@ -20,6 +21,21 @@ abstract class IGroupRepository {
 
   /// Watch members of a group.
   Stream<List<GroupMember>> watchGroupMembers(String groupId);
+
+  /// Watch current user's membership record in a group.
+  Stream<GroupMember?> watchMember(String groupId, String userId);
+
+  /// Fetch members page for pagination.
+  Future<
+      ({
+        List<GroupMember> items,
+        QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc,
+        bool hasMore,
+      })> fetchGroupMembersPage(
+    String groupId, {
+    QueryDocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 5,
+  });
 
   /// Add a member to a group (by email or user ID).
   Future<void> addMember({

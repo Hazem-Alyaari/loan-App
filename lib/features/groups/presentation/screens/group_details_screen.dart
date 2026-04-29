@@ -8,6 +8,7 @@ import 'package:loan/core/widgets/status_badge.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/groups/application/providers/group_providers.dart';
 import 'package:loan/features/transactions/application/providers/transaction_providers.dart';
+import 'package:loan/features/transactions/domain/models/transaction_model.dart';
 
 class GroupDetailsScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -439,114 +440,7 @@ class _TransactionsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final txAsync = ref.watch(groupTransactionsProvider(groupId));
-
-    return txAsync.when(
-      data: (transactions) {
-        if (transactions.isEmpty) {
-          return const Center(
-            child: Text('لا توجد معاملات بعد',
-                style: TextStyle(color: AppColors.textHint)),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          itemCount: transactions.length,
-          itemBuilder: (context, index) {
-            final tx = transactions[index];
-            final statusType = switch (tx.status) {
-              TransactionStatus.approved => StatusType.success,
-              TransactionStatus.rejected => StatusType.error,
-              TransactionStatus.pending => StatusType.warning,
-              TransactionStatus.cancelled => StatusType.neutral,
-            };
-
-            return GlassCard(
-              onTap: () => context.push(
-                '/groups/$groupId/transactions/${tx.id}',
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          tx.type == TransactionType.loan
-                              ? Icons.monetization_on_outlined
-                              : tx.type == TransactionType.repayment
-                                  ? Icons.payments_outlined
-                                  : Icons.edit_outlined,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              tx.note.isNotEmpty ? tx.note : _transactionTypeLabel(tx.type),
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${tx.creditorName ?? tx.creditorUserId} → ${tx.debtorName ?? tx.debtorUserId}',
-                              style: const TextStyle(
-                                color: AppColors.textHint,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${tx.amount.toStringAsFixed(2)} ${tx.currency}',
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          StatusBadge(
-                            label: _statusLabel(tx.status),
-                            type: statusType,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
-      error: (e, _) => Center(
-        child: Text('خطأ: $e',
-            style: const TextStyle(color: AppColors.textSecondary)),
-      ),
-    );
+    return _PaginatedTransactionsList(groupId: groupId);
   }
 }
 
@@ -573,21 +467,17 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
   @override
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
-    final authUser = ref.watch(authStateProvider).value;
+    final currentMemberAsync = ref.watch(currentGroupMemberProvider(widget.groupId));
     final controllerState = ref.watch(groupControllerProvider);
     final isAdding = controllerState is AsyncLoading;
+    final canManageMembers = switch (currentMemberAsync.value?.role) {
+      MemberRole.owner || MemberRole.admin => true,
+      _ => false,
+    };
 
     return membersAsync.when(
-      data: (members) {
-        final currentRole = members
-            .where((m) => m.userId == authUser?.uid)
-            .map((m) => m.role)
-            .firstOrNull;
-        final canManageMembers =
-            currentRole == MemberRole.owner || currentRole == MemberRole.admin;
-
-        return Column(
-          children: [
+      data: (members) => Column(
+        children: [
             if (canManageMembers)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -766,17 +656,245 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                       },
                     ),
             ),
-          ],
-        );
-      },
+      ],
+    ),
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => Center(
-        child: Text('خطأ: $e',
-            style: const TextStyle(color: AppColors.textSecondary)),
+        child: Text(
+          'خطأ: $e',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
       ),
     );
+  }
+}
+
+class _PaginatedTransactionsList extends ConsumerStatefulWidget {
+  final String groupId;
+  const _PaginatedTransactionsList({required this.groupId});
+
+  @override
+  ConsumerState<_PaginatedTransactionsList> createState() =>
+      _PaginatedTransactionsListState();
+}
+
+class _PaginatedTransactionsListState
+    extends ConsumerState<_PaginatedTransactionsList> {
+  final List<TransactionModel> _items = [];
+  bool _loading = false;
+  bool _hasMore = true;
+  dynamic _lastDoc;
+  String? _selectedUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(reset: true));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final members = ref.watch(groupMembersProvider(widget.groupId)).value ?? [];
+    final filteredItems = _selectedUserId == null
+        ? _items
+        : _items
+            .where((tx) =>
+                tx.creditorUserId == _selectedUserId ||
+                tx.debtorUserId == _selectedUserId)
+            .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF333355)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String?>(
+                value: _selectedUserId,
+                isExpanded: true,
+                dropdownColor: AppColors.surfaceLight,
+                hint: const Text(
+                  'تصفية حسب المستخدم',
+                  style: TextStyle(color: AppColors.textHint),
+                ),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textHint,
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('كل المستخدمين'),
+                  ),
+                  ...members.map(
+                    (m) => DropdownMenuItem<String?>(
+                      value: m.userId,
+                      child: Text(m.userName ?? m.userId),
+                    ),
+                  ),
+                ],
+                onChanged: (value) => setState(() => _selectedUserId = value),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _buildTransactionsList(filteredItems),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTransactionsList(List<TransactionModel> list) {
+    if (_items.isEmpty && _loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+    if (list.isEmpty) {
+      return Center(
+        child: Text(
+          _selectedUserId == null
+              ? 'لا توجد معاملات بعد'
+              : 'لا توجد معاملات لهذا المستخدم',
+          style: const TextStyle(color: AppColors.textHint),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      itemCount: list.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= list.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: OutlinedButton(
+                onPressed: _loading ? null : _load,
+                child: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('تحميل المزيد'),
+              ),
+            ),
+          );
+        }
+
+        final tx = list[index];
+        final statusType = switch (tx.status) {
+          TransactionStatus.approved => StatusType.success,
+          TransactionStatus.rejected => StatusType.error,
+          TransactionStatus.pending => StatusType.warning,
+          TransactionStatus.cancelled => StatusType.neutral,
+        };
+
+        return GlassCard(
+          onTap: () => context.push('/groups/${widget.groupId}/transactions/${tx.id}'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      tx.type == TransactionType.loan
+                          ? Icons.monetization_on_outlined
+                          : tx.type == TransactionType.repayment
+                              ? Icons.payments_outlined
+                              : Icons.edit_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tx.note.isNotEmpty ? tx.note : _transactionTypeLabel(tx.type),
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${tx.creditorName ?? tx.creditorUserId} → ${tx.debtorName ?? tx.debtorUserId}',
+                          style: const TextStyle(
+                            color: AppColors.textHint,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${tx.amount.toStringAsFixed(2)} ${tx.currency}',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      StatusBadge(label: _statusLabel(tx.status), type: statusType),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _load({bool reset = false}) async {
+    if (_loading) return;
+    if (!reset && !_hasMore) return;
+    setState(() => _loading = true);
+    final repo = ref.read(transactionRepositoryProvider);
+    final page = await repo.fetchGroupTransactionsPage(
+      widget.groupId,
+      startAfter: reset ? null : _lastDoc,
+      limit: 5,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (reset) _items.clear();
+      _items.addAll(page.items);
+      _lastDoc = page.lastDoc;
+      _hasMore = page.hasMore;
+      _loading = false;
+    });
   }
 }
 

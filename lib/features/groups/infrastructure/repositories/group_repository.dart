@@ -90,6 +90,50 @@ class GroupRepository implements IGroupRepository {
   }
 
   @override
+  Stream<GroupMember?> watchMember(String groupId, String userId) {
+    return _groupsRef
+        .doc(groupId)
+        .collection('members')
+        .doc(userId)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) return null;
+      return GroupMember.fromFirestore(doc);
+    });
+  }
+
+  @override
+  Future<
+      ({
+        List<GroupMember> items,
+        QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc,
+        bool hasMore,
+      })> fetchGroupMembersPage(
+    String groupId, {
+    QueryDocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 5,
+  }) async {
+    Query<Map<String, dynamic>> query = _groupsRef
+        .doc(groupId)
+        .collection('members')
+        .where('status', isEqualTo: MemberStatus.active.name)
+        .orderBy('joinedAt', descending: true)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    final items = snapshot.docs.map((doc) => GroupMember.fromFirestore(doc)).toList();
+    return (
+      items: items,
+      lastDoc: snapshot.docs.isEmpty ? null : snapshot.docs.last,
+      hasMore: snapshot.docs.length == limit,
+    );
+  }
+
+  @override
   Future<void> addMember({
     required String groupId,
     required String userId,

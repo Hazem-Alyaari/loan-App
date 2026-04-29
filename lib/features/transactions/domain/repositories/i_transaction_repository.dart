@@ -1,5 +1,6 @@
 import 'package:loan/core/enums/enums.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Contract for transaction operations.
 abstract class ITransactionRepository {
@@ -8,6 +9,18 @@ abstract class ITransactionRepository {
 
   /// Watch all transactions in a group, ordered by creation date.
   Stream<List<TransactionModel>> watchGroupTransactions(String groupId);
+
+  /// Fetch transactions page for pagination.
+  Future<
+      ({
+        List<TransactionModel> items,
+        QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc,
+        bool hasMore,
+      })> fetchGroupTransactionsPage(
+    String groupId, {
+    QueryDocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 5,
+  });
 
   /// Watch a single transaction.
   Stream<TransactionModel> watchTransaction(String groupId, String transactionId);

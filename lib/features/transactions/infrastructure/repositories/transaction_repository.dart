@@ -32,6 +32,33 @@ class TransactionRepository implements ITransactionRepository {
   }
 
   @override
+  Future<
+      ({
+        List<TransactionModel> items,
+        QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc,
+        bool hasMore,
+      })> fetchGroupTransactionsPage(
+    String groupId, {
+    QueryDocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 5,
+  }) async {
+    Query<Map<String, dynamic>> query =
+        _txRef(groupId).orderBy('createdAt', descending: true).limit(limit);
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    final items =
+        snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+    return (
+      items: items,
+      lastDoc: snapshot.docs.isEmpty ? null : snapshot.docs.last,
+      hasMore: snapshot.docs.length == limit,
+    );
+  }
+
+  @override
   Stream<TransactionModel> watchTransaction(
       String groupId, String transactionId) {
     return _txRef(groupId).doc(transactionId).snapshots().map(

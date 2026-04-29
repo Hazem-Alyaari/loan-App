@@ -38,6 +38,13 @@ final groupMembersProvider =
   return ref.watch(groupRepositoryProvider).watchGroupMembers(groupId);
 });
 
+final currentGroupMemberProvider =
+    StreamProvider.family<GroupMember?, String>((ref, groupId) {
+  final uid = ref.watch(authStateProvider).value?.uid;
+  if (uid == null) return Stream.value(null);
+  return ref.watch(groupRepositoryProvider).watchMember(groupId, uid);
+});
+
 // ---------------------------------------------------------------------------
 // Group controller (create, add member, etc.)
 // ---------------------------------------------------------------------------
