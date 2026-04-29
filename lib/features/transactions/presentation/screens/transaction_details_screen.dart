@@ -6,6 +6,7 @@ import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/core/widgets/status_badge.dart';
+import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/transactions/application/providers/transaction_providers.dart';
 
 class TransactionDetailsScreen extends ConsumerWidget {
@@ -20,6 +21,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUserId = ref.watch(authStateProvider).value?.uid;
     final txAsync = ref.watch(
       transactionDetailProvider(
         (groupId: groupId, transactionId: transactionId),
@@ -153,8 +155,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // Action buttons (only if pending)
-                  if (tx.status == TransactionStatus.pending) ...[
+                  // Action buttons (only if pending and current user is debtor)
+                  if (tx.status == TransactionStatus.pending &&
+                      currentUserId == tx.debtorUserId) ...[
                     GradientButton(
                       text: 'موافقة',
                       icon: Icons.check_rounded,
@@ -184,6 +187,18 @@ class TransactionDetailsScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
+                      ),
+                    ),
+                  ] else if (tx.status == TransactionStatus.pending) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'الموافقة أو الرفض متاح للمدين فقط',
+                        style: TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],

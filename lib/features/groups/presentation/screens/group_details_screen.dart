@@ -228,63 +228,144 @@ class _BalancesTab extends ConsumerWidget {
     final myNet = me.net;
     final entries = summaryByUser.entries.toList()
       ..sort((a, b) => b.value.net.compareTo(a.value.net));
+    final approvedCount = transactions
+        .where((t) => t.status == TransactionStatus.approved)
+        .length;
 
     return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
       children: [
         GlassCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'رصيدي',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'عرض رصيدك الحالي فقط',
-                style: const TextStyle(color: AppColors.textHint, fontSize: 12),
-              ),
-              const SizedBox(height: 14),
-              _balanceLine(
-                title: 'لك على الناس',
-                value: me.receivable,
-                currency: group.currencyCode,
-                color: AppColors.success,
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'رصيدي',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF333355)),
+                    ),
+                    child: Text(
+                      '$approvedCount معاملة معتمدة',
+                      style: const TextStyle(
+                        color: AppColors.textHint,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
-              _balanceLine(
-                title: 'عليك للناس',
-                value: me.payable,
-                currency: group.currencyCode,
-                color: AppColors.error,
+              const Text(
+                'ملخص واضح لرصيدك الحالي داخل هذه المجموعة',
+                style: TextStyle(
+                  color: AppColors.textHint,
+                  fontSize: 12,
+                ),
               ),
-              const Divider(height: 24, color: Color(0xFF2A2A45)),
-              _balanceLine(
-                title: 'الصافي',
-                value: myNet,
-                currency: group.currencyCode,
-                color: myNet >= 0 ? AppColors.success : AppColors.error,
-                signed: true,
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: _metricCard(
+                      title: 'لك على الناس',
+                      value:
+                          '${me.receivable.toStringAsFixed(2)} ${group.currencyCode}',
+                      color: AppColors.success,
+                      icon: Icons.south_west_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _metricCard(
+                      title: 'عليك للناس',
+                      value: '${me.payable.toStringAsFixed(2)} ${group.currencyCode}',
+                      color: AppColors.error,
+                      icon: Icons.north_east_rounded,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF333355)),
+                ),
+                child: Row(
+                  children: [
+                    const Text(
+                      'الصافي',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${myNet >= 0 ? '+' : ''}${myNet.toStringAsFixed(2)} ${group.currencyCode}',
+                      style: TextStyle(
+                        color: myNet >= 0 ? AppColors.success : AppColors.error,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
         const Padding(
-          padding: EdgeInsets.fromLTRB(18, 8, 18, 4),
+          padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: Text(
             'تفصيل الرصيد حسب الشخص',
             style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
+        if (approvedCount == 0)
+          const GlassCard(
+            child: Text(
+              'لا توجد معاملات معتمدة بعد، لذلك لا يوجد رصيد محسوب حاليا.',
+              style: TextStyle(color: AppColors.textHint),
+            ),
+          ),
         for (final entry in entries)
           GlassCard(
             child: Row(
@@ -315,12 +396,20 @@ class _BalancesTab extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        'له: ${entry.value.receivable.toStringAsFixed(2)} • عليه: ${entry.value.payable.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: AppColors.textHint,
-                          fontSize: 12,
-                        ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          _tinyBalancePill(
+                            label:
+                                'له ${entry.value.receivable.toStringAsFixed(2)}',
+                            color: AppColors.success,
+                          ),
+                          _tinyBalancePill(
+                            label: 'عليه ${entry.value.payable.toStringAsFixed(2)}',
+                            color: AppColors.error,
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -738,35 +827,69 @@ class _BalanceSummary {
   }
 }
 
-Widget _balanceLine({
+Widget _metricCard({
   required String title,
-  required double value,
-  required String currency,
+  required String value,
   required Color color,
-  bool signed = false,
+  required IconData icon,
 }) {
-  final display = signed
-      ? '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)} $currency'
-      : '${value.toStringAsFixed(2)} $currency';
-  return Row(
-    children: [
-      Expanded(
-        child: Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceLight,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFF333355)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textHint,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
             fontSize: 14,
+            fontWeight: FontWeight.w800,
           ),
         ),
+      ],
+    ),
+  );
+}
+
+Widget _tinyBalancePill({
+  required String label,
+  required Color color,
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
       ),
-      Text(
-        display,
-        style: TextStyle(
-          color: color,
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    ],
+    ),
   );
 }
