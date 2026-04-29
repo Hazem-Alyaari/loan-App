@@ -1,0 +1,79 @@
+# =========================
+# OS / General
+# =========================
+.DS_Store
+*.log
+*.swp
+*.lock
+
+# =========================
+# IDEs
+# =========================
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# VS Code (keep if you want shared settings)
+.vscode/
+
+# =========================
+# Dart / Flutter
+# =========================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Generated docs
+**/doc/api/
+
+# =========================
+# Android
+# =========================
+android/.gradle/
+android/app/build/
+android/build/
+
+# Keystore files (IMPORTANT: never upload)
+*.jks
+*.keystore
+
+# Local config (machine-specific)
+android/local.properties
+
+# =========================
+# iOS
+# =========================
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/.last_build_id
+
+# =========================
+# Firebase / Secrets
+# =========================
+
+# Keep Firebase config tracked (IMPORTANT)
+# DO NOT IGNORE THESE:
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist
+
+# But ignore Firebase emulator/cache files
+.firebase/
+firestore-debug.log
+
+# =========================
+# Node (for functions folder)
+# =========================
+functions/node_modules/
+functions/.env
+
+# =========================
+# Misc
+# =========================
+.history
+.svn/

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "770793498115",
+    "project_id": "loan-85736",
+    "storage_bucket": "loan-85736.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:770793498115:android:04ff5996b51eeba0531036",
+        "android_client_info": {
+          "package_name": "com.hazem.loan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5SQz4HPb42CPBHDtzTAeYpZjSX7fKBkw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

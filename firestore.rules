@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ── Helper Functions ──────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isGroupMember(groupId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    function isGroupOwnerOrAdmin(groupId) {
+      let member = get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+      return isAuthenticated() && 
+             member != null && 
+             (member.data.role == 'owner' || member.data.role == 'admin');
+    }
+
+    // ── Users ─────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read user profiles (for member lookups).
+      allow read: if isAuthenticated();
+      // Users can only create/update their own profile.
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+      
+      // Notifications subcollection — private to the user.
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId) 
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+        // Only Cloud Functions should create notifications.
+        allow create: if false;
+        allow delete: if false;
+      }
+    }
+
+    // ── Groups ────────────────────────────────────────────────
+    match /groups/{groupId} {
+      // Any authenticated user can create a group.
+      allow create: if isAuthenticated() 
+                    && request.resource.data.createdByUserId == request.auth.uid;
+      // Only members can read the group.
+      allow read: if isGroupMember(groupId);
+      // Only owner/admin can update group settings.
+      allow update: if isGroupOwnerOrAdmin(groupId);
+      // Only owner can delete the group.
+      allow delete: if false; // Use Cloud Functions for safe deletion.
+
+      // ── Members subcollection ─────────────────────────────
+      match /members/{memberId} {
+        allow read: if isGroupMember(groupId);
+        // Owner/admin can add/update members.
+        allow create: if isGroupOwnerOrAdmin(groupId) || isOwner(memberId);
+        allow update: if isGroupOwnerOrAdmin(groupId);
+        allow delete: if false; // Soft-delete via status field.
+      }
+
+      // ── Transactions subcollection ────────────────────────
+      match /transactions/{transactionId} {
+        allow read: if isGroupMember(groupId);
+        // Any member can create a transaction.
+        allow create: if isGroupMember(groupId) 
+                      && request.resource.data.createdByUserId == request.auth.uid
+                      && request.resource.data.status == 'pending';
+        // Members can update status (approve/reject) — 
+        // further validation should be done in Cloud Functions.
+        allow update: if isGroupMember(groupId);
+        // Only the creator can delete a pending transaction.
+        allow delete: if isGroupMember(groupId) 
+                      && resource.data.createdByUserId == request.auth.uid 
+                      && resource.data.status == 'pending';
+
+        // ── Approvals subcollection ───────────────────────
+        match /approvals/{approvalId} {
+          allow read: if isGroupMember(groupId);
+          allow create: if isGroupMember(groupId);
+          allow update: if isOwner(approvalId);
+          allow delete: if false;
+        }
+      }
+
+      // ── Audit Logs subcollection ──────────────────────────
+      match /auditLogs/{logId} {
+        allow read: if isGroupMember(groupId);
+        // Only Cloud Functions should write audit logs.
+        allow write: if false;
+      }
+    }
+  }
+}
