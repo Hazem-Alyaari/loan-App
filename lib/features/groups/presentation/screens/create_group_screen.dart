@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/theme/app_theme.dart';
@@ -13,6 +14,7 @@ class CreateGroupScreen extends ConsumerStatefulWidget {
 }
 
 class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
+  static const int _maxGroupNameLength = 60;
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   String _currency = 'YER';
@@ -92,6 +94,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: _nameController,
+                  maxLength: _maxGroupNameLength,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(_maxGroupNameLength),
+                  ],
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
                     hintText: 'مثال: رحلة نهاية الأسبوع',
@@ -101,6 +107,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return 'اسم المجموعة مطلوب';
+                    }
+                    if (v.trim().length > _maxGroupNameLength) {
+                      return 'اسم المجموعة طويل جدا';
                     }
                     return null;
                   },

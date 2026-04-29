@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
@@ -454,6 +455,9 @@ class _MembersTab extends ConsumerStatefulWidget {
 }
 
 class _MembersTabState extends ConsumerState<_MembersTab> {
+  static const int _maxMemberNameLength = 50;
+  static const int _maxPhoneLength = 20;
+
   @override
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
@@ -591,6 +595,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
             children: [
               TextField(
                 controller: nameController,
+                maxLength: _maxMemberNameLength,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(_maxMemberNameLength),
+                ],
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'اسم العضو',
@@ -604,6 +612,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
+                maxLength: _maxPhoneLength,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(_maxPhoneLength),
+                ],
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'رقم الهاتف',
@@ -634,6 +646,24 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   return;
                 }
                 if (phone.isEmpty) {
+                if (name.length > _maxMemberNameLength) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('اسم العضو طويل جدا'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return;
+                }
+                if (phone.length > _maxPhoneLength) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('رقم الهاتف طويل جدا'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return;
+                }
                   messenger.showSnackBar(
                     const SnackBar(
                       content: Text('رقم الهاتف مطلوب'),

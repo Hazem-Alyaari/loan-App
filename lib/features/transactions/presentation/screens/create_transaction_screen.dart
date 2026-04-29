@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
@@ -20,6 +21,8 @@ class CreateTransactionScreen extends ConsumerStatefulWidget {
 
 class _CreateTransactionScreenState
     extends ConsumerState<CreateTransactionScreen> {
+  static const int _maxAmountLength = 16;
+  static const int _maxNoteLength = 250;
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
@@ -139,6 +142,12 @@ class _CreateTransactionScreenState
                       controller: _amountController,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
+                      maxLength: _maxAmountLength,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^-?\d*\.?\d*$'),
+                        ),
+                      ],
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 24,
@@ -223,6 +232,10 @@ class _CreateTransactionScreenState
                     TextFormField(
                       controller: _noteController,
                       maxLines: 3,
+                      maxLength: _maxNoteLength,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(_maxNoteLength),
+                      ],
                       style: const TextStyle(color: AppColors.textPrimary),
                       decoration: const InputDecoration(
                         hintText: 'ملاحظة عن سبب المعاملة',
@@ -288,6 +301,15 @@ class _CreateTransactionScreenState
     final selectedMember = members.where((m) => m.userId == _debtorId).firstOrNull;
     final selectedName = selectedMember?.userName ?? selectedMember?.userId ?? '';
     final rawAmount = double.parse(_amountController.text.trim());
+    if (_noteController.text.trim().length > _maxNoteLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('النص طويل جدا، الحد الأقصى للملاحظة 250 حرف'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
     final amount = rawAmount.abs();
     final isPositive = rawAmount > 0;
     final creditorId = isPositive ? currentUserId : _debtorId!;
