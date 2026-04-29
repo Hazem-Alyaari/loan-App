@@ -16,7 +16,7 @@ class NotificationsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: const Text('الإشعارات'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -26,7 +26,7 @@ class NotificationsScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(notificationControllerProvider.notifier).markAllAsRead();
             },
-            child: const Text('Mark all read'),
+            child: const Text('تحديد الكل كمقروء'),
           ),
         ],
       ),
@@ -52,7 +52,7 @@ class NotificationsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'No notifications',
+                      'لا توجد إشعارات',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 18,
@@ -61,7 +61,7 @@ class NotificationsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      "You're all caught up!",
+                      'لا يوجد جديد حاليا',
                       style: TextStyle(
                         color: AppColors.textHint,
                         fontSize: 14,
@@ -85,7 +85,7 @@ class NotificationsScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (e, _) => Center(
-            child: Text('Error: $e',
+            child: Text('خطأ: $e',
                 style: const TextStyle(color: AppColors.textSecondary)),
           ),
         ),
@@ -208,10 +208,10 @@ class _NotificationTile extends ConsumerWidget {
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return 'الآن';
+    if (diff.inMinutes < 60) return 'قبل ${diff.inMinutes} دقيقة';
+    if (diff.inHours < 24) return 'قبل ${diff.inHours} ساعة';
+    if (diff.inDays < 7) return 'قبل ${diff.inDays} يوم';
     return '${date.day}/${date.month}/${date.year}';
   }
 }

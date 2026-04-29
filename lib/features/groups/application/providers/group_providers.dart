@@ -58,7 +58,7 @@ class GroupController extends AsyncNotifier<void> {
     GroupModel? result;
     state = await AsyncValue.guard(() async {
       final user = ref.read(authStateProvider).value;
-      if (user == null) throw Exception('Not authenticated');
+      if (user == null) throw Exception('المستخدم غير مسجل الدخول');
 
       final profile =
           await ref.read(authRepositoryProvider).getUserProfile(user.uid);
@@ -67,7 +67,7 @@ class GroupController extends AsyncNotifier<void> {
         name: name,
         currencyCode: currencyCode,
         creatorUserId: user.uid,
-        creatorName: profile?.fullName ?? 'Unknown',
+        creatorName: profile?.fullName ?? 'مستخدم',
         creatorEmail: profile?.email ?? '',
       );
     });

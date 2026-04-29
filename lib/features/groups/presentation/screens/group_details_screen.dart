@@ -86,7 +86,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '${group.memberIds.length} members • ${group.currencyCode}',
+                              '${group.memberIds.length} عضو • ${group.currencyCode}',
                               style: const TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 14,
@@ -108,9 +108,9 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                       fontSize: 14,
                     ),
                     tabs: const [
-                      Tab(text: 'Balances'),
-                      Tab(text: 'Transactions'),
-                      Tab(text: 'Members'),
+                      Tab(text: 'الأرصدة'),
+                      Tab(text: 'المعاملات'),
+                      Tab(text: 'الأعضاء'),
                     ],
                   ),
                 ),
@@ -129,7 +129,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (err, _) => Center(
-            child: Text('Error: $err',
+            child: Text('خطأ: $err',
                 style: const TextStyle(color: AppColors.textSecondary)),
           ),
         ),
@@ -138,7 +138,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
         onPressed: () =>
             context.push('/groups/${widget.groupId}/create-transaction'),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('New Transaction'),
+        label: const Text('معاملة جديدة'),
       ),
     );
   }
@@ -159,7 +159,7 @@ class _BalancesTab extends ConsumerWidget {
         final balances = group.balances;
         if (balances.isEmpty) {
           return const Center(
-            child: Text('No balances yet',
+            child: Text('لا توجد أرصدة بعد',
                 style: TextStyle(color: AppColors.textHint)),
           );
         }
@@ -229,7 +229,7 @@ class _BalancesTab extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => Center(
-        child: Text('Error: $e',
+        child: Text('خطأ: $e',
             style: const TextStyle(color: AppColors.textSecondary)),
       ),
     );
@@ -249,7 +249,7 @@ class _TransactionsTab extends ConsumerWidget {
       data: (transactions) {
         if (transactions.isEmpty) {
           return const Center(
-            child: Text('No transactions yet',
+            child: Text('لا توجد معاملات بعد',
                 style: TextStyle(color: AppColors.textHint)),
           );
         }
@@ -299,7 +299,7 @@ class _TransactionsTab extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              tx.note.isNotEmpty ? tx.note : tx.type.name,
+                              tx.note.isNotEmpty ? tx.note : _transactionTypeLabel(tx.type),
                               style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontSize: 15,
@@ -330,7 +330,7 @@ class _TransactionsTab extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           StatusBadge(
-                            label: tx.status.name.toUpperCase(),
+                            label: _statusLabel(tx.status),
                             type: statusType,
                           ),
                         ],
@@ -347,7 +347,7 @@ class _TransactionsTab extends ConsumerWidget {
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => Center(
-        child: Text('Error: $e',
+        child: Text('خطأ: $e',
             style: const TextStyle(color: AppColors.textSecondary)),
       ),
     );
@@ -392,7 +392,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                     controller: _nameController,
                     style: const TextStyle(color: AppColors.textPrimary),
                     decoration: const InputDecoration(
-                      hintText: 'Member name',
+                      hintText: 'اسم العضو',
                       prefixIcon: Icon(
                         Icons.person_outline,
                         color: AppColors.textHint,
@@ -408,7 +408,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                           keyboardType: TextInputType.phone,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(
-                            hintText: 'Add member by phone number',
+                            hintText: 'إضافة عضو برقم الهاتف',
                             prefixIcon: Icon(
                               Icons.phone_outlined,
                               color: AppColors.textHint,
@@ -427,7 +427,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                 if (name.isEmpty) {
                                   messenger.showSnackBar(
                                     const SnackBar(
-                                      content: Text('Member name is required'),
+                                      content: Text('اسم العضو مطلوب'),
                                       backgroundColor: AppColors.error,
                                     ),
                                   );
@@ -436,7 +436,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                 if (phone.isEmpty) {
                                   messenger.showSnackBar(
                                     const SnackBar(
-                                      content: Text('Phone number is required'),
+                                      content: Text('رقم الهاتف مطلوب'),
                                       backgroundColor: AppColors.error,
                                     ),
                                   );
@@ -455,7 +455,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                   messenger.showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        'Member added. Default password: 12345678',
+                                        'تمت إضافة العضو. كلمة المرور الافتراضية: 12345678',
                                       ),
                                     ),
                                   );
@@ -474,7 +474,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                 height: 16,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Add'),
+                            : const Text('إضافة'),
                       ),
                     ],
                   ),
@@ -485,7 +485,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               child: members.isEmpty
                   ? const Center(
                       child: Text(
-                        'No members',
+                        'لا يوجد أعضاء',
                         style: TextStyle(color: AppColors.textHint),
                       ),
                     )
@@ -551,7 +551,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                 ),
                               ),
                               StatusBadge(
-                                label: member.role.name.toUpperCase(),
+                                label: _memberRoleLabel(member.role),
                                 type: roleType,
                               ),
                             ],
@@ -567,9 +567,34 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
         child: CircularProgressIndicator(color: AppColors.primary),
       ),
       error: (e, _) => Center(
-        child: Text('Error: $e',
+        child: Text('خطأ: $e',
             style: const TextStyle(color: AppColors.textSecondary)),
       ),
     );
   }
+}
+
+String _memberRoleLabel(MemberRole role) {
+  return switch (role) {
+    MemberRole.owner => 'المالك',
+    MemberRole.admin => 'مشرف',
+    MemberRole.member => 'عضو',
+  };
+}
+
+String _statusLabel(TransactionStatus status) {
+  return switch (status) {
+    TransactionStatus.approved => 'موافق',
+    TransactionStatus.rejected => 'مرفوض',
+    TransactionStatus.pending => 'معلّق',
+    TransactionStatus.cancelled => 'ملغي',
+  };
+}
+
+String _transactionTypeLabel(TransactionType type) {
+  return switch (type) {
+    TransactionType.loan => 'قرض',
+    TransactionType.repayment => 'سداد',
+    TransactionType.correction => 'تصحيح',
+  };
 }

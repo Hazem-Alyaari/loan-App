@@ -34,7 +34,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: const Text('ملفي الشخصي'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -53,7 +53,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (profile == null) {
               return const Center(
                 child: Text(
-                  'Profile not found',
+                  'تعذر العثور على الملف الشخصي',
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               );
@@ -76,18 +76,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       const SizedBox(height: 12),
                       _ProfileRow(
-                        label: 'Phone',
+                        label: 'الهاتف',
                         value: profile.phoneNumber ?? '-',
                       ),
                       const SizedBox(height: 10),
                       _ProfileRow(
-                        label: 'Login method',
-                        value: profile.authProvider.name,
+                        label: 'طريقة تسجيل الدخول',
+                        value: _providerLabel(profile.authProvider.name),
                       ),
                       if (profile.mustChangePassword) ...[
                         const SizedBox(height: 14),
                         const Text(
-                          'Your account is using the default password. Please change it now.',
+                          'حسابك يستخدم كلمة المرور الافتراضية. يرجى تغييرها الآن.',
                           style: TextStyle(
                             color: AppColors.warning,
                             fontWeight: FontWeight.w600,
@@ -105,7 +105,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Change Password',
+                          'تغيير كلمة المرور',
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
@@ -118,7 +118,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(
-                            hintText: 'Current password',
+                            hintText: 'كلمة المرور الحالية',
                             prefixIcon: Icon(
                               Icons.lock_outline,
                               color: AppColors.textHint,
@@ -126,7 +126,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'Current password is required';
+                              return 'كلمة المرور الحالية مطلوبة';
                             }
                             return null;
                           },
@@ -137,7 +137,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(
-                            hintText: 'New password',
+                            hintText: 'كلمة المرور الجديدة',
                             prefixIcon: Icon(
                               Icons.lock_reset_outlined,
                               color: AppColors.textHint,
@@ -145,10 +145,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'New password is required';
+                              return 'كلمة المرور الجديدة مطلوبة';
                             }
                             if (value.length < 8) {
-                              return 'Password must be at least 8 characters';
+                              return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
                             }
                             return null;
                           },
@@ -159,7 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
                           decoration: const InputDecoration(
-                            hintText: 'Confirm new password',
+                            hintText: 'تأكيد كلمة المرور الجديدة',
                             prefixIcon: Icon(
                               Icons.verified_user_outlined,
                               color: AppColors.textHint,
@@ -167,7 +167,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value != _newPasswordController.text) {
-                              return 'Passwords do not match';
+                              return 'كلمتا المرور غير متطابقتين';
                             }
                             return null;
                           },
@@ -185,7 +185,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text('Update Password'),
+                                : const Text('تحديث كلمة المرور'),
                           ),
                         ),
                       ],
@@ -200,7 +200,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           error: (error, _) => Center(
             child: Text(
-              'Error: $error',
+              'خطأ: $error',
               style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
@@ -222,7 +222,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _newPasswordController.clear();
       _confirmPasswordController.clear();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Password updated successfully')),
+        const SnackBar(content: Text('تم تحديث كلمة المرور بنجاح')),
       );
       ref.invalidate(currentUserProfileProvider);
     } catch (e) {
@@ -272,4 +272,12 @@ class _ProfileRow extends StatelessWidget {
       ],
     );
   }
+}
+
+String _providerLabel(String provider) {
+  return switch (provider) {
+    'email' => 'الهاتف وكلمة المرور',
+    'google' => 'Google',
+    _ => provider,
+  };
 }

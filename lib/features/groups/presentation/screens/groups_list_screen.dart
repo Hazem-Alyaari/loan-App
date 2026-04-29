@@ -40,7 +40,7 @@ class GroupsListScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'My Groups',
+                            'مجموعاتي',
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineMedium
@@ -48,7 +48,7 @@ class GroupsListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Manage your group finances',
+                            'إدارة المصروفات الجماعية',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
@@ -135,7 +135,7 @@ class GroupsListScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 16),
                             const Text(
-                              'No groups yet',
+                              'لا توجد مجموعات بعد',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 18,
@@ -144,7 +144,7 @@ class GroupsListScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 8),
                             const Text(
-                              'Create your first group to get started',
+                              'أنشئ أول مجموعة للبدء',
                               style: TextStyle(
                                 color: AppColors.textHint,
                                 fontSize: 14,
@@ -177,7 +177,7 @@ class GroupsListScreen extends ConsumerWidget {
                 ),
                 error: (err, _) => SliverFillRemaining(
                   child: Center(
-                    child: Text('Error: $err',
+                    child: Text('خطأ: $err',
                         style:
                             const TextStyle(color: AppColors.textSecondary)),
                   ),
@@ -190,7 +190,7 @@ class GroupsListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/create-group'),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('New Group'),
+        label: const Text('مجموعة جديدة'),
       ),
     );
   }
@@ -241,7 +241,7 @@ class _GroupCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$memberCount member${memberCount == 1 ? '' : 's'} • ${group.currencyCode}',
+                      '$memberCount عضو • ${group.currencyCode}',
                       style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 13,

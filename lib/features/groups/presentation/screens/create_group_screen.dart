@@ -42,7 +42,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Group'),
+        title: const Text('إنشاء مجموعة'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -86,7 +86,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
                 // Name
                 Text(
-                  'Group Name',
+                  'اسم المجموعة',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -94,13 +94,13 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                   controller: _nameController,
                   style: const TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(
-                    hintText: 'e.g. Weekend Trip, Roommates',
+                    hintText: 'مثال: رحلة نهاية الأسبوع',
                     prefixIcon: Icon(Icons.edit_outlined,
                         color: AppColors.textHint),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'Group name is required';
+                      return 'اسم المجموعة مطلوب';
                     }
                     return null;
                   },
@@ -109,7 +109,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
                 // Currency
                 Text(
-                  'Currency',
+                  'العملة',
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -147,7 +147,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 const Spacer(),
 
                 GradientButton(
-                  text: 'Create Group',
+                  text: 'إنشاء المجموعة',
                   icon: Icons.add_rounded,
                   isLoading: isLoading,
                   onPressed: isLoading ? null : _handleCreate,

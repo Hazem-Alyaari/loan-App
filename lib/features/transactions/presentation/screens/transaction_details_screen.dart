@@ -28,7 +28,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transaction Details'),
+        title: const Text('تفاصيل المعاملة'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -86,13 +86,12 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         StatusBadge(
-                          label: tx.status.name.toUpperCase(),
+                          label: _statusLabel(tx.status),
                           type: statusType,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          tx.type.name[0].toUpperCase() +
-                              tx.type.name.substring(1),
+                          _transactionTypeLabel(tx.type),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,
@@ -110,34 +109,34 @@ class TransactionDetailsScreen extends ConsumerWidget {
                       children: [
                         _DetailRow(
                           icon: Icons.person_outline,
-                          label: 'Creditor',
+                          label: 'الدائن',
                           value: tx.creditorName ?? tx.creditorUserId,
                         ),
                         const Divider(color: Color(0xFF2A2A45)),
                         _DetailRow(
                           icon: Icons.person_outline,
-                          label: 'Debtor',
+                          label: 'المدين',
                           value: tx.debtorName ?? tx.debtorUserId,
                         ),
                         if (tx.note.isNotEmpty) ...[
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.notes_outlined,
-                            label: 'Note',
+                            label: 'الملاحظة',
                             value: tx.note,
                           ),
                         ],
                         const Divider(color: Color(0xFF2A2A45)),
                         _DetailRow(
                           icon: Icons.calendar_today_outlined,
-                          label: 'Created',
+                          label: 'تاريخ الإنشاء',
                           value: _formatDate(tx.createdAt),
                         ),
                         if (tx.approvedAt != null) ...[
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.check_circle_outline,
-                            label: 'Approved',
+                            label: 'تاريخ الموافقة',
                             value: _formatDate(tx.approvedAt!),
                           ),
                         ],
@@ -145,7 +144,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.cancel_outlined,
-                            label: 'Rejected',
+                            label: 'تاريخ الرفض',
                             value: _formatDate(tx.rejectedAt!),
                           ),
                         ],
@@ -157,7 +156,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   // Action buttons (only if pending)
                   if (tx.status == TransactionStatus.pending) ...[
                     GradientButton(
-                      text: 'Approve',
+                      text: 'موافقة',
                       icon: Icons.check_rounded,
                       onPressed: () {
                         ref
@@ -176,7 +175,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         },
                         icon: const Icon(Icons.close_rounded,
                             color: AppColors.error),
-                        label: const Text('Reject',
+                        label: const Text('رفض',
                             style: TextStyle(color: AppColors.error)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
@@ -196,7 +195,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (e, _) => Center(
-            child: Text('Error: $e',
+            child: Text('خطأ: $e',
                 style: const TextStyle(color: AppColors.textSecondary)),
           ),
         ),
@@ -207,6 +206,23 @@ class TransactionDetailsScreen extends ConsumerWidget {
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
+}
+
+String _statusLabel(TransactionStatus status) {
+  return switch (status) {
+    TransactionStatus.approved => 'موافق',
+    TransactionStatus.rejected => 'مرفوض',
+    TransactionStatus.pending => 'معلّق',
+    TransactionStatus.cancelled => 'ملغي',
+  };
+}
+
+String _transactionTypeLabel(TransactionType type) {
+  return switch (type) {
+    TransactionType.loan => 'قرض',
+    TransactionType.repayment => 'سداد',
+    TransactionType.correction => 'تصحيح',
+  };
 }
 
 class _DetailRow extends StatelessWidget {

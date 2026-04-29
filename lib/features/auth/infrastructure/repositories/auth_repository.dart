@@ -155,7 +155,7 @@ class AuthRepository implements IAuthRepository {
 
     final appUser = AppUser(
       id: user.uid,
-      fullName: user.displayName ?? 'Unknown',
+      fullName: user.displayName ?? 'مستخدم',
       email: user.email ?? '',
       phoneNumber: user.phoneNumber,
       authProvider: AuthProvider.google,

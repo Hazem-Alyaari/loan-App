@@ -57,7 +57,7 @@ class _CreateTransactionScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Transaction'),
+        title: const Text('معاملة جديدة'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -81,7 +81,7 @@ class _CreateTransactionScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Transaction type selector
-                    Text('Type',
+                    Text('النوع',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     Row(
@@ -111,8 +111,7 @@ class _CreateTransactionScreenState
                               ),
                               child: Center(
                                 child: Text(
-                                  type.name[0].toUpperCase() +
-                                      type.name.substring(1),
+                                  _transactionTypeLabel(type),
                                   style: TextStyle(
                                     color: isSelected
                                         ? AppColors.primary
@@ -132,7 +131,7 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 28),
 
                     // Amount
-                    Text('Amount',
+                    Text('المبلغ',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -168,10 +167,10 @@ class _CreateTransactionScreenState
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Amount is required';
+                        if (v == null || v.isEmpty) return 'المبلغ مطلوب';
                         final amount = double.tryParse(v);
                         if (amount == null || amount <= 0) {
-                          return 'Enter a valid amount';
+                          return 'أدخل مبلغا صحيحا';
                         }
                         return null;
                       },
@@ -179,31 +178,31 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 28),
 
                     // Creditor
-                    Text('Creditor (Lender)',
+                    Text('الدائن (المقرض)',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     _MemberDropdown(
                       members: members,
                       value: _creditorId,
-                      hint: 'Select creditor',
+                      hint: 'اختر الدائن',
                       onChanged: (v) => setState(() => _creditorId = v),
                     ),
                     const SizedBox(height: 28),
 
                     // Debtor
-                    Text('Debtor (Borrower)',
+                    Text('المدين (المقترض)',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     _MemberDropdown(
                       members: members,
                       value: _debtorId,
-                      hint: 'Select debtor',
+                      hint: 'اختر المدين',
                       onChanged: (v) => setState(() => _debtorId = v),
                     ),
                     const SizedBox(height: 28),
 
                     // Note
-                    Text('Note (optional)',
+                    Text('ملاحظة (اختياري)',
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -211,7 +210,7 @@ class _CreateTransactionScreenState
                       maxLines: 3,
                       style: const TextStyle(color: AppColors.textPrimary),
                       decoration: const InputDecoration(
-                        hintText: 'What is this for?',
+                        hintText: 'ملاحظة عن سبب المعاملة',
                         prefixIcon: Icon(Icons.notes_outlined,
                             color: AppColors.textHint),
                       ),
@@ -219,7 +218,7 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 40),
 
                     GradientButton(
-                      text: 'Create Transaction',
+                      text: 'إنشاء المعاملة',
                       icon: Icons.send_rounded,
                       isLoading: isLoading,
                       onPressed: isLoading
@@ -235,7 +234,7 @@ class _CreateTransactionScreenState
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text('خطأ: $e')),
         ),
       ),
     );
@@ -246,7 +245,7 @@ class _CreateTransactionScreenState
     if (_creditorId == null || _debtorId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select both creditor and debtor'),
+          content: Text('يرجى اختيار كل من الدائن والمدين'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -255,7 +254,7 @@ class _CreateTransactionScreenState
     if (_creditorId == _debtorId) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Creditor and debtor cannot be the same'),
+          content: Text('لا يمكن أن يكون الدائن والمدين نفس الشخص'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -291,6 +290,14 @@ class _CreateTransactionScreenState
         .read(transactionControllerProvider.notifier)
         .createTransaction(transaction);
   }
+}
+
+String _transactionTypeLabel(TransactionType type) {
+  return switch (type) {
+    TransactionType.loan => 'قرض',
+    TransactionType.repayment => 'سداد',
+    TransactionType.correction => 'تصحيح',
+  };
 }
 
 class _MemberDropdown extends StatelessWidget {
