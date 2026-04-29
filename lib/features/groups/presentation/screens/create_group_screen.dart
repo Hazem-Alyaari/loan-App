@@ -15,8 +15,8 @@ class CreateGroupScreen extends ConsumerStatefulWidget {
 class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  String _currency = 'USD';
-  final _currencies = ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'EGP', 'IQD', 'JOD'];
+  String _currency = 'YER';
+  final _currencies = ['YER', 'USD', 'SAR'];
 
   @override
   void dispose() {

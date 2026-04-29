@@ -454,16 +454,6 @@ class _MembersTab extends ConsumerStatefulWidget {
 }
 
 class _MembersTabState extends ConsumerState<_MembersTab> {
-  final _nameController = TextEditingController();
-  final _phoneController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
@@ -481,98 +471,14 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
             if (canManageMembers)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
+                child: Row(
                   children: [
-                    TextField(
-                      controller: _nameController,
-                      style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(
-                        hintText: 'اسم العضو',
-                        prefixIcon: Icon(
-                          Icons.person_outline,
-                          color: AppColors.textHint,
-                        ),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isAdding ? null : _showAddMemberDialog,
+                        icon: const Icon(Icons.person_add_alt_1_rounded),
+                        label: const Text('عضو جديد'),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            style: const TextStyle(color: AppColors.textPrimary),
-                            decoration: const InputDecoration(
-                              hintText: 'إضافة عضو برقم الهاتف',
-                              prefixIcon: Icon(
-                                Icons.phone_outlined,
-                                color: AppColors.textHint,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        FilledButton(
-                          onPressed: isAdding
-                              ? null
-                              : () async {
-                                  final messenger = ScaffoldMessenger.of(context);
-                                  final name = _nameController.text.trim();
-                                  final phone = _phoneController.text.trim();
-                                  if (name.isEmpty) {
-                                    messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text('اسم العضو مطلوب'),
-                                        backgroundColor: AppColors.error,
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  if (phone.isEmpty) {
-                                    messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text('رقم الهاتف مطلوب'),
-                                        backgroundColor: AppColors.error,
-                                      ),
-                                    );
-                                    return;
-                                  }
-                                  try {
-                                    await ref
-                                        .read(groupControllerProvider.notifier)
-                                        .addMemberByPhone(
-                                          groupId: widget.groupId,
-                                          fullName: name,
-                                          phoneNumber: phone,
-                                        );
-                                    _nameController.clear();
-                                    _phoneController.clear();
-                                    messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'تمت إضافة العضو. كلمة المرور الافتراضية: 12345678',
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(e.toString()),
-                                        backgroundColor: AppColors.error,
-                                      ),
-                                    );
-                                  }
-                                },
-                          child: isAdding
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Text('إضافة'),
-                        ),
-                      ],
                     ),
                   ],
                 ),
@@ -668,6 +574,110 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
         ),
       ),
     );
+  }
+
+  Future<void> _showAddMemberDialog() async {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('إضافة عضو جديد'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'اسم العضو',
+                  prefixIcon: Icon(
+                    Icons.person_outline,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneController,
+                keyboardType: TextInputType.phone,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  hintText: 'رقم الهاتف',
+                  prefixIcon: Icon(
+                    Icons.phone_outlined,
+                    color: AppColors.textHint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                if (name.isEmpty) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('اسم العضو مطلوب'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return;
+                }
+                if (phone.isEmpty) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('رقم الهاتف مطلوب'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  await ref.read(groupControllerProvider.notifier).addMemberByPhone(
+                        groupId: widget.groupId,
+                        fullName: name,
+                        phoneNumber: phone,
+                      );
+                  if (dialogContext.mounted) {
+                    Navigator.of(dialogContext).pop(true);
+                  }
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
+              },
+              child: const Text('إضافة'),
+            ),
+          ],
+        );
+      },
+    );
+
+    nameController.dispose();
+    phoneController.dispose();
+
+    if (added == true && mounted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('تمت إضافة العضو بنجاح'),
+        ),
+      );
+    }
   }
 }
 
