@@ -92,6 +92,30 @@ class TransactionRepository implements ITransactionRepository {
   }
 
   @override
+  Future<List<TransactionModel>> fetchMemberApprovedTransactions(
+    String groupId, {
+    required String memberUserId,
+  }) async {
+    final asCreditorQuery = _txRef(groupId)
+        .where('status', isEqualTo: TransactionStatus.approved.name)
+        .where('creditorUserId', isEqualTo: memberUserId);
+    final asDebtorQuery = _txRef(groupId)
+        .where('status', isEqualTo: TransactionStatus.approved.name)
+        .where('debtorUserId', isEqualTo: memberUserId);
+
+    final snapshots = await Future.wait([asCreditorQuery.get(), asDebtorQuery.get()]);
+    final merged = <String, TransactionModel>{};
+    for (final snapshot in snapshots) {
+      for (final doc in snapshot.docs) {
+        merged[doc.id] = TransactionModel.fromFirestore(doc);
+      }
+    }
+    final list = merged.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return list;
+  }
+
+  @override
   Stream<TransactionModel> watchTransaction(
       String groupId, String transactionId) {
     return _txRef(groupId).doc(transactionId).snapshots().map(

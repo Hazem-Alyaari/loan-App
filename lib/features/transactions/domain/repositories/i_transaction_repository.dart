@@ -22,6 +22,12 @@ abstract class ITransactionRepository {
     int limit = 5,
   });
 
+  /// Fetch approved transactions for one member in a group.
+  Future<List<TransactionModel>> fetchMemberApprovedTransactions(
+    String groupId, {
+    required String memberUserId,
+  });
+
   /// Watch a single transaction.
   Stream<TransactionModel> watchTransaction(String groupId, String transactionId);
 

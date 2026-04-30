@@ -22,6 +22,14 @@ final groupTransactionsProvider =
       .watchGroupTransactions(groupId);
 });
 
+final memberApprovedTransactionsProvider = FutureProvider.family<
+    List<TransactionModel>, ({String groupId, String userId})>((ref, params) {
+  return ref.watch(transactionRepositoryProvider).fetchMemberApprovedTransactions(
+        params.groupId,
+        memberUserId: params.userId,
+      );
+});
+
 // ---------------------------------------------------------------------------
 // Single transaction stream
 // ---------------------------------------------------------------------------

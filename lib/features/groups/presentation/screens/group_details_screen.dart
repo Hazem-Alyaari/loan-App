@@ -26,7 +26,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -139,6 +139,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                     tabs: const [
                       Tab(text: 'الأرصدة'),
                       Tab(text: 'المعاملات'),
+                      Tab(text: 'التحليل'),
                       Tab(text: 'الأعضاء'),
                     ],
                   ),
@@ -149,6 +150,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                 children: [
                   _BalancesTab(groupId: widget.groupId),
                   _TransactionsTab(groupId: widget.groupId),
+                  _MonthlyAnalysisTab(groupId: widget.groupId),
                   _MembersTab(groupId: widget.groupId),
                 ],
               ),
@@ -194,6 +196,7 @@ class _BalancesTab extends ConsumerWidget {
     final txAsync = ref.watch(groupTransactionsProvider(groupId));
     final membersAsync = ref.watch(groupMembersProvider(groupId));
     final groupAsync = ref.watch(groupDetailProvider(groupId));
+    final currentMemberAsync = ref.watch(currentGroupMemberProvider(groupId));
 
     if (authUser == null) {
       return const Center(
@@ -201,8 +204,15 @@ class _BalancesTab extends ConsumerWidget {
             style: TextStyle(color: AppColors.textHint)),
       );
     }
+    final myApprovedTxAsync = ref.watch(
+      memberApprovedTransactionsProvider((groupId: groupId, userId: authUser.uid)),
+    );
 
-    if (groupAsync.isLoading || membersAsync.isLoading || txAsync.isLoading) {
+    if (groupAsync.isLoading ||
+        membersAsync.isLoading ||
+        currentMemberAsync.isLoading ||
+        txAsync.isLoading ||
+        myApprovedTxAsync.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
@@ -220,6 +230,18 @@ class _BalancesTab extends ConsumerWidget {
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
+    if (currentMemberAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${currentMemberAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (myApprovedTxAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${myApprovedTxAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
     if (txAsync.hasError) {
       return Center(
         child: Text('خطأ: ${txAsync.error}',
@@ -229,47 +251,41 @@ class _BalancesTab extends ConsumerWidget {
 
     final group = groupAsync.value!;
     final members = membersAsync.value ?? [];
-    final transactions = txAsync.value ?? [];
-
+    final canViewAllBalances = switch (currentMemberAsync.value?.role) {
+      MemberRole.owner || MemberRole.admin => true,
+      _ => false,
+    };
     final memberNameMap = <String, String>{};
     for (final member in members) {
       memberNameMap[member.userId] = member.userName ?? member.userId;
     }
 
-    final approvedTransactions = transactions
-        .where((t) => t.status == TransactionStatus.approved)
+    final approvedTransactions = (txAsync.value ?? [])
+        .where((tx) => tx.status == TransactionStatus.approved)
         .toList();
-    final approvedForCurrentUser = approvedTransactions
-        .where(
-          (t) => t.creditorUserId == authUser.uid || t.debtorUserId == authUser.uid,
+    final netByUserFromTx = _buildNetByUser(approvedTransactions);
+
+    final balances = group.balances;
+    final myPairwiseFromTx =
+        _buildPairwiseForMember(myApprovedTxAsync.value ?? const [], authUser.uid);
+    final myReceivable = myPairwiseFromTx.values
+        .where((value) => value > 0)
+        .fold<double>(0, (sum, value) => sum + value);
+    final myPayable = myPairwiseFromTx.values
+        .where((value) => value < 0)
+        .fold<double>(0, (sum, value) => sum + value.abs());
+    final myNet = myReceivable - myPayable;
+
+    final entries = balances.entries
+        .where((entry) => canViewAllBalances || entry.key == authUser.uid)
+        .map(
+          (entry) => MapEntry(
+            entry.key,
+            netByUserFromTx[entry.key] ?? 0.0,
+          ),
         )
-        .toList();
-
-    final summaryByCounterparty = <String, _BalanceSummary>{};
-    for (final tx in approvedForCurrentUser) {
-      final counterpartyId =
-          tx.creditorUserId == authUser.uid ? tx.debtorUserId : tx.creditorUserId;
-      final current =
-          summaryByCounterparty[counterpartyId] ?? const _BalanceSummary();
-      if (tx.creditorUserId == authUser.uid) {
-        summaryByCounterparty[counterpartyId] =
-            current.copyWith(receivable: current.receivable + tx.amount);
-      } else {
-        summaryByCounterparty[counterpartyId] =
-            current.copyWith(payable: current.payable + tx.amount);
-      }
-    }
-
-    final me = _BalanceSummary(
-      receivable: summaryByCounterparty.values
-          .fold(0.0, (sum, item) => sum + item.receivable),
-      payable: summaryByCounterparty.values
-          .fold(0.0, (sum, item) => sum + item.payable),
-    );
-    final myNet = me.net;
-    final entries = summaryByCounterparty.entries.toList()
-      ..sort((a, b) => b.value.net.compareTo(a.value.net));
-    final approvedCount = approvedForCurrentUser.length;
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
@@ -312,7 +328,7 @@ class _BalancesTab extends ConsumerWidget {
                       border: Border.all(color: const Color(0xFF333355)),
                     ),
                     child: Text(
-                      '$approvedCount معاملة معتمدة',
+                      canViewAllBalances ? 'رصيد كل الأعضاء' : 'رصيدك الحالي',
                       style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 11,
@@ -336,8 +352,7 @@ class _BalancesTab extends ConsumerWidget {
                   Expanded(
                     child: _metricCard(
                       title: 'لك على الناس',
-                      value:
-                          '${me.receivable.toStringAsFixed(2)} ${group.currencyCode}',
+                      value: '${myReceivable.toStringAsFixed(2)} ${group.currencyCode}',
                       color: AppColors.success,
                       icon: Icons.south_west_rounded,
                     ),
@@ -346,7 +361,7 @@ class _BalancesTab extends ConsumerWidget {
                   Expanded(
                     child: _metricCard(
                       title: 'عليك للناس',
-                      value: '${me.payable.toStringAsFixed(2)} ${group.currencyCode}',
+                      value: '${myPayable.toStringAsFixed(2)} ${group.currencyCode}',
                       color: AppColors.error,
                       icon: Icons.north_east_rounded,
                     ),
@@ -387,10 +402,10 @@ class _BalancesTab extends ConsumerWidget {
             ],
           ),
         ),
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: Text(
-            'تفصيل الرصيد حسب الشخص',
+            canViewAllBalances ? 'أرصدة الأعضاء' : 'رصيدك',
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
@@ -398,15 +413,24 @@ class _BalancesTab extends ConsumerWidget {
             ),
           ),
         ),
-        if (approvedCount == 0)
+        if (entries.isEmpty)
           const GlassCard(
             child: Text(
-              'لا توجد معاملات معتمدة بعد، لذلك لا يوجد رصيد محسوب حاليا.',
+              'لا توجد أرصدة متاحة حاليا.',
               style: TextStyle(color: AppColors.textHint),
             ),
           ),
         for (final entry in entries)
           GlassCard(
+            onTap: () => _showMemberSettlementSheet(
+              context,
+              ref: ref,
+              groupId: groupId,
+              memberId: entry.key,
+              memberName: memberNameMap[entry.key] ?? entry.key,
+              currencyCode: group.currencyCode,
+              memberNameMap: memberNameMap,
+            ),
             child: Row(
               children: [
                 CircleAvatar(
@@ -435,28 +459,36 @@ class _BalancesTab extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _tinyBalancePill(
-                            label:
-                                'لك عليه ${entry.value.receivable.toStringAsFixed(2)}',
-                            color: AppColors.success,
-                          ),
-                          _tinyBalancePill(
-                            label: 'عليك له ${entry.value.payable.toStringAsFixed(2)}',
-                            color: AppColors.error,
-                          ),
-                        ],
+                      Text(
+                        entry.value > 0
+                            ? 'له على المجموعة'
+                            : entry.value < 0
+                                ? 'عليه للمجموعة'
+                                : 'رصيد متوازن',
+                        style: const TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.value > 0
+                            ? 'له على المجموعة'
+                            : entry.value < 0
+                                ? 'عليه للمجموعة'
+                                : 'متوازن',
+                        style: const TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Text(
-                  '${entry.value.net >= 0 ? '+' : ''}${entry.value.net.toStringAsFixed(2)} ${group.currencyCode}',
+                  '${entry.value >= 0 ? '+' : ''}${entry.value.toStringAsFixed(2)} ${group.currencyCode}',
                   style: TextStyle(
-                    color: entry.value.net >= 0
+                    color: entry.value >= 0
                         ? AppColors.success
                         : AppColors.error,
                     fontWeight: FontWeight.w700,
@@ -471,6 +503,218 @@ class _BalancesTab extends ConsumerWidget {
   }
 }
 
+void _showMemberSettlementSheet(
+  BuildContext context, {
+  required WidgetRef ref,
+  required String groupId,
+  required String memberId,
+  required String memberName,
+  required String currencyCode,
+  required Map<String, String> memberNameMap,
+}) {
+  final future = ref.read(transactionRepositoryProvider).fetchMemberApprovedTransactions(
+        groupId,
+        memberUserId: memberId,
+      );
+
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.surface,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return FutureBuilder<List<TransactionModel>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(
+              height: 260,
+              child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            );
+          }
+          if (snapshot.hasError) {
+            return SizedBox(
+              height: 260,
+              child: Center(
+                child: Text(
+                  'خطأ: ${snapshot.error}',
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            );
+          }
+
+          final pairwiseForMember =
+              _buildPairwiseForMember(snapshot.data ?? [], memberId);
+          final positiveEntries = pairwiseForMember.entries
+              .where((entry) => entry.value > 0)
+              .toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+          final negativeEntries = pairwiseForMember.entries
+              .where((entry) => entry.value < 0)
+              .toList()
+            ..sort((a, b) => a.value.compareTo(b.value));
+          final totalReceivable = positiveEntries.fold<double>(
+            0,
+            (sum, entry) => sum + entry.value,
+          );
+          final totalPayable = negativeEntries.fold<double>(
+            0,
+            (sum, entry) => sum + entry.value.abs(),
+          );
+          final net = totalReceivable - totalPayable;
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.receipt_long_rounded,
+                            color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'تسوية العضو • $memberName',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    for (final entry in positiveEntries)
+                      _settlementRow(
+                        label: 'له على ${memberNameMap[entry.key] ?? entry.key}',
+                        value: entry.value,
+                        currencyCode: currencyCode,
+                        color: AppColors.success,
+                      ),
+                    for (final entry in negativeEntries)
+                      _settlementRow(
+                        label: 'عليه لـ ${memberNameMap[entry.key] ?? entry.key}',
+                        value: entry.value.abs(),
+                        currencyCode: currencyCode,
+                        color: AppColors.error,
+                      ),
+                    if (positiveEntries.isEmpty && negativeEntries.isEmpty)
+                      const Text(
+                        'لا توجد تسويات مفتوحة لهذا العضو.',
+                        style: TextStyle(color: AppColors.textHint),
+                      ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF333355)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'الملخص',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'إجمالي له: ${totalReceivable.toStringAsFixed(2)} $currencyCode',
+                            style: const TextStyle(color: AppColors.success),
+                          ),
+                          Text(
+                            'إجمالي عليه: ${totalPayable.toStringAsFixed(2)} $currencyCode',
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                          Text(
+                            'الصافي: ${net >= 0 ? '+' : ''}${net.toStringAsFixed(2)} $currencyCode',
+                            style: TextStyle(
+                              color: net >= 0 ? AppColors.success : AppColors.error,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+Map<String, double> _buildPairwiseForMember(
+  List<TransactionModel> approvedTransactions,
+  String memberId,
+) {
+  final result = <String, double>{};
+  for (final tx in approvedTransactions) {
+    if (tx.creditorUserId == memberId) {
+      result[tx.debtorUserId] = (result[tx.debtorUserId] ?? 0) + tx.amount;
+    } else if (tx.debtorUserId == memberId) {
+      result[tx.creditorUserId] = (result[tx.creditorUserId] ?? 0) - tx.amount;
+    }
+  }
+  result.removeWhere((_, value) => value.abs() < 0.0001);
+  return result;
+}
+
+Map<String, double> _buildNetByUser(List<TransactionModel> approvedTransactions) {
+  final result = <String, double>{};
+  for (final tx in approvedTransactions) {
+    result[tx.creditorUserId] = (result[tx.creditorUserId] ?? 0) + tx.amount;
+    result[tx.debtorUserId] = (result[tx.debtorUserId] ?? 0) - tx.amount;
+  }
+  return result;
+}
+
+Widget _settlementRow({
+  required String label,
+  required double value,
+  required String currencyCode,
+  required Color color,
+}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ),
+        Text(
+          '${value.toStringAsFixed(2)} $currencyCode',
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 // ─── Transactions Tab ───────────────────────────────────────────────────────
 class _TransactionsTab extends ConsumerWidget {
   final String groupId;
@@ -479,6 +723,164 @@ class _TransactionsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _PaginatedTransactionsList(groupId: groupId);
+  }
+}
+
+class _MonthlyAnalysisTab extends ConsumerWidget {
+  final String groupId;
+  const _MonthlyAnalysisTab({required this.groupId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authUser = ref.watch(authStateProvider).value;
+    final txAsync = ref.watch(groupTransactionsProvider(groupId));
+    final currentMemberAsync = ref.watch(currentGroupMemberProvider(groupId));
+    final groupAsync = ref.watch(groupDetailProvider(groupId));
+
+    if (authUser == null) {
+      return const Center(
+        child: Text('المستخدم غير مسجل الدخول',
+            style: TextStyle(color: AppColors.textHint)),
+      );
+    }
+
+    if (txAsync.isLoading || currentMemberAsync.isLoading || groupAsync.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (txAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${txAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (currentMemberAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${currentMemberAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (groupAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${groupAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+
+    final group = groupAsync.value!;
+    final canViewAll = switch (currentMemberAsync.value?.role) {
+      MemberRole.owner || MemberRole.admin => true,
+      _ => false,
+    };
+    final approvedTx = (txAsync.value ?? [])
+        .where((tx) => tx.status == TransactionStatus.approved)
+        .where(
+          (tx) =>
+              canViewAll ||
+              tx.creditorUserId == authUser.uid ||
+              tx.debtorUserId == authUser.uid,
+        )
+        .toList();
+
+    final monthly = <String, _MonthlyMetrics>{};
+    for (final tx in approvedTx) {
+      final key =
+          '${tx.createdAt.year}-${tx.createdAt.month.toString().padLeft(2, '0')}';
+      final current = monthly[key] ?? const _MonthlyMetrics();
+      final incoming = tx.creditorUserId == authUser.uid ? tx.amount : 0.0;
+      final outgoing = tx.debtorUserId == authUser.uid ? tx.amount : 0.0;
+      monthly[key] = current.copyWith(
+        totalAmount: current.totalAmount + tx.amount,
+        incoming: current.incoming + incoming,
+        outgoing: current.outgoing + outgoing,
+        count: current.count + 1,
+      );
+    }
+
+    final monthEntries = monthly.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key));
+
+    if (monthEntries.isEmpty) {
+      return const Center(
+        child: Text(
+          'لا توجد معاملات معتمدة للتحليل الشهري',
+          style: TextStyle(color: AppColors.textHint),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
+      children: [
+        for (final entry in monthEntries)
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_month_rounded,
+                        color: AppColors.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatMonthKey(entry.key),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${entry.value.count} معاملات',
+                      style: const TextStyle(
+                        color: AppColors.textHint,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _metricCard(
+                  title: 'إجمالي الشهر',
+                  value:
+                      '${entry.value.totalAmount.toStringAsFixed(2)} ${group.currencyCode}',
+                  color: AppColors.info,
+                  icon: Icons.stacked_line_chart_rounded,
+                ),
+                if (!canViewAll) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _metricCard(
+                          title: 'لك',
+                          value:
+                              '${entry.value.incoming.toStringAsFixed(2)} ${group.currencyCode}',
+                          color: AppColors.success,
+                          icon: Icons.south_west_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _metricCard(
+                          title: 'عليك',
+                          value:
+                              '${entry.value.outgoing.toStringAsFixed(2)} ${group.currencyCode}',
+                          color: AppColors.error,
+                          icon: Icons.north_east_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 
@@ -1017,24 +1419,30 @@ String _transactionTypeLabel(TransactionType type) {
   };
 }
 
-class _BalanceSummary {
-  final double receivable;
-  final double payable;
+class _MonthlyMetrics {
+  final double totalAmount;
+  final double incoming;
+  final double outgoing;
+  final int count;
 
-  const _BalanceSummary({
-    this.receivable = 0,
-    this.payable = 0,
+  const _MonthlyMetrics({
+    this.totalAmount = 0,
+    this.incoming = 0,
+    this.outgoing = 0,
+    this.count = 0,
   });
 
-  double get net => receivable - payable;
-
-  _BalanceSummary copyWith({
-    double? receivable,
-    double? payable,
+  _MonthlyMetrics copyWith({
+    double? totalAmount,
+    double? incoming,
+    double? outgoing,
+    int? count,
   }) {
-    return _BalanceSummary(
-      receivable: receivable ?? this.receivable,
-      payable: payable ?? this.payable,
+    return _MonthlyMetrics(
+      totalAmount: totalAmount ?? this.totalAmount,
+      incoming: incoming ?? this.incoming,
+      outgoing: outgoing ?? this.outgoing,
+      count: count ?? this.count,
     );
   }
 }
@@ -1085,25 +1493,10 @@ Widget _metricCard({
   );
 }
 
-Widget _tinyBalancePill({
-  required String label,
-  required Color color,
-}) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.14),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: color,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-  );
+String _formatMonthKey(String monthKey) {
+  final parts = monthKey.split('-');
+  if (parts.length != 2) return monthKey;
+  return '${parts[1]}/${parts[0]}';
 }
 
 Widget _headerMetaChip({
