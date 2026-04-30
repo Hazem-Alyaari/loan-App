@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/features/notifications/domain/models/app_notification.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
 import 'package:loan/features/transactions/domain/repositories/i_transaction_repository.dart';
 
@@ -15,10 +16,42 @@ class TransactionRepository implements ITransactionRepository {
   CollectionReference<Map<String, dynamic>> _txRef(String groupId) =>
       _groupDoc(groupId).collection('transactions');
 
+  DocumentReference<Map<String, dynamic>> _userNotifRef(
+    String userId,
+    String notificationId,
+  ) =>
+      _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('notifications')
+          .doc(notificationId);
+
   @override
   Future<void> createTransaction(TransactionModel transaction) async {
     final docRef = _txRef(transaction.groupId).doc(transaction.id);
-    await docRef.set(transaction.toJson());
+    final batch = _firestore.batch();
+    batch.set(docRef, transaction.toJson());
+
+    if (transaction.debtorUserId != transaction.createdByUserId) {
+      final pendingNotif = AppNotification(
+        id: 'tx_${transaction.id}_approval_${transaction.debtorUserId}',
+        userId: transaction.debtorUserId,
+        groupId: transaction.groupId,
+        transactionId: transaction.id,
+        type: NotificationType.approvalRequest,
+        title: 'معاملة جديدة بانتظار موافقتك',
+        message:
+            'قام ${transaction.createdByName ?? transaction.creditorName ?? 'أحد الأعضاء'} بإضافة معاملة بمبلغ ${transaction.amount.toStringAsFixed(2)} ${transaction.currency}.',
+        createdAt: DateTime.now(),
+      );
+
+      batch.set(
+        _userNotifRef(transaction.debtorUserId, pendingNotif.id),
+        pendingNotif.toJson(),
+      );
+    }
+
+    await batch.commit();
   }
 
   @override
@@ -72,6 +105,12 @@ class TransactionRepository implements ITransactionRepository {
     required String transactionId,
     required TransactionStatus status,
   }) async {
+    final txDoc = await _txRef(groupId).doc(transactionId).get();
+    if (!txDoc.exists) {
+      throw Exception('المعاملة غير موجودة');
+    }
+    final tx = TransactionModel.fromFirestore(txDoc);
+
     final updates = <String, dynamic>{
       'status': status.name,
     };
@@ -82,7 +121,42 @@ class TransactionRepository implements ITransactionRepository {
       updates['rejectedAt'] = FieldValue.serverTimestamp();
     }
 
-    await _txRef(groupId).doc(transactionId).update(updates);
+    final batch = _firestore.batch();
+    batch.update(_txRef(groupId).doc(transactionId), updates);
+
+    if (status == TransactionStatus.approved ||
+        status == TransactionStatus.rejected) {
+      final type = status == TransactionStatus.approved
+          ? NotificationType.transactionApproved
+          : NotificationType.transactionRejected;
+      final title = status == TransactionStatus.approved
+          ? 'تمت الموافقة على المعاملة'
+          : 'تم رفض المعاملة';
+      final message = status == TransactionStatus.approved
+          ? 'وافق ${tx.debtorName ?? 'المدين'} على معاملتك بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.'
+          : 'رفض ${tx.debtorName ?? 'المدين'} معاملتك بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.';
+
+      final notifyUserIds = <String>{
+        tx.createdByUserId,
+        tx.creditorUserId,
+      }..remove(tx.debtorUserId);
+
+      for (final userId in notifyUserIds) {
+        final notif = AppNotification(
+          id: 'tx_${tx.id}_${status.name}_$userId',
+          userId: userId,
+          groupId: tx.groupId,
+          transactionId: tx.id,
+          type: type,
+          title: title,
+          message: message,
+          createdAt: DateTime.now(),
+        );
+        batch.set(_userNotifRef(userId, notif.id), notif.toJson());
+      }
+    }
+
+    await batch.commit();
   }
 
   @override

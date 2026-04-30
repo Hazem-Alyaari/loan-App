@@ -53,7 +53,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
             return NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) => [
                 SliverAppBar(
-                  expandedHeight: 200,
+                  expandedHeight: 240,
                   pinned: true,
                   backgroundColor: AppColors.surface,
                   leading: IconButton(
@@ -73,29 +73,55 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                           ],
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 90, 20, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              group.name,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 56),
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    group.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.textPrimary,
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      _headerMetaChip(
+                                        icon: Icons.group_outlined,
+                                        text: '${group.memberIds.length} عضو',
+                                      ),
+                                      _headerMetaChip(
+                                        icon: Icons.payments_outlined,
+                                        text: group.currencyCode,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '${group.memberIds.length} عضو • ${group.currencyCode}',
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
@@ -137,7 +163,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final messenger = ScaffoldMessenger.of(context);
           final created = await context.push<bool>(
@@ -151,8 +177,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
             );
           }
         },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('معاملة جديدة'),
+        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -211,28 +236,40 @@ class _BalancesTab extends ConsumerWidget {
       memberNameMap[member.userId] = member.userName ?? member.userId;
     }
 
-    final summaryByUser = <String, _BalanceSummary>{};
-    for (final member in members) {
-      summaryByUser[member.userId] = const _BalanceSummary();
-    }
-
-    for (final tx in transactions) {
-      if (tx.status != TransactionStatus.approved) continue;
-      final creditor = summaryByUser[tx.creditorUserId] ?? const _BalanceSummary();
-      final debtor = summaryByUser[tx.debtorUserId] ?? const _BalanceSummary();
-      summaryByUser[tx.creditorUserId] =
-          creditor.copyWith(receivable: creditor.receivable + tx.amount);
-      summaryByUser[tx.debtorUserId] =
-          debtor.copyWith(payable: debtor.payable + tx.amount);
-    }
-
-    final me = summaryByUser[authUser.uid] ?? const _BalanceSummary();
-    final myNet = me.net;
-    final entries = summaryByUser.entries.toList()
-      ..sort((a, b) => b.value.net.compareTo(a.value.net));
-    final approvedCount = transactions
+    final approvedTransactions = transactions
         .where((t) => t.status == TransactionStatus.approved)
-        .length;
+        .toList();
+    final approvedForCurrentUser = approvedTransactions
+        .where(
+          (t) => t.creditorUserId == authUser.uid || t.debtorUserId == authUser.uid,
+        )
+        .toList();
+
+    final summaryByCounterparty = <String, _BalanceSummary>{};
+    for (final tx in approvedForCurrentUser) {
+      final counterpartyId =
+          tx.creditorUserId == authUser.uid ? tx.debtorUserId : tx.creditorUserId;
+      final current =
+          summaryByCounterparty[counterpartyId] ?? const _BalanceSummary();
+      if (tx.creditorUserId == authUser.uid) {
+        summaryByCounterparty[counterpartyId] =
+            current.copyWith(receivable: current.receivable + tx.amount);
+      } else {
+        summaryByCounterparty[counterpartyId] =
+            current.copyWith(payable: current.payable + tx.amount);
+      }
+    }
+
+    final me = _BalanceSummary(
+      receivable: summaryByCounterparty.values
+          .fold(0.0, (sum, item) => sum + item.receivable),
+      payable: summaryByCounterparty.values
+          .fold(0.0, (sum, item) => sum + item.payable),
+    );
+    final myNet = me.net;
+    final entries = summaryByCounterparty.entries.toList()
+      ..sort((a, b) => b.value.net.compareTo(a.value.net));
+    final approvedCount = approvedForCurrentUser.length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
@@ -404,11 +441,11 @@ class _BalancesTab extends ConsumerWidget {
                         children: [
                           _tinyBalancePill(
                             label:
-                                'له ${entry.value.receivable.toStringAsFixed(2)}',
+                                'لك عليه ${entry.value.receivable.toStringAsFixed(2)}',
                             color: AppColors.success,
                           ),
                           _tinyBalancePill(
-                            label: 'عليه ${entry.value.payable.toStringAsFixed(2)}',
+                            label: 'عليك له ${entry.value.payable.toStringAsFixed(2)}',
                             color: AppColors.error,
                           ),
                         ],
@@ -736,69 +773,84 @@ class _PaginatedTransactionsListState
 
   @override
   Widget build(BuildContext context) {
+    final authUser = ref.watch(authStateProvider).value;
+    final currentMember = ref.watch(currentGroupMemberProvider(widget.groupId)).value;
+    final canViewAllTransactions = switch (currentMember?.role) {
+      MemberRole.owner || MemberRole.admin => true,
+      _ => false,
+    };
+    final effectiveUserIdFilter =
+        canViewAllTransactions ? _selectedUserId : authUser?.uid;
     final members = ref.watch(groupMembersProvider(widget.groupId)).value ?? [];
-    final filteredItems = _selectedUserId == null
+    final filteredItems = effectiveUserIdFilter == null
         ? _items
         : _items
             .where((tx) =>
-                tx.creditorUserId == _selectedUserId ||
-                tx.debtorUserId == _selectedUserId)
+                tx.creditorUserId == effectiveUserIdFilter ||
+                tx.debtorUserId == effectiveUserIdFilter)
             .toList();
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceLight,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF333355)),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String?>(
-                value: _selectedUserId,
-                isExpanded: true,
-                dropdownColor: AppColors.surfaceLight,
-                hint: const Text(
-                  'تصفية حسب المستخدم',
-                  style: TextStyle(color: AppColors.textHint),
-                ),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textHint,
-                ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('كل المستخدمين'),
+        if (canViewAllTransactions)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF333355)),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String?>(
+                  value: _selectedUserId,
+                  isExpanded: true,
+                  dropdownColor: AppColors.surfaceLight,
+                  hint: const Text(
+                    'تصفية حسب المستخدم',
+                    style: TextStyle(color: AppColors.textHint),
                   ),
-                  ...members.map(
-                    (m) => DropdownMenuItem<String?>(
-                      value: m.userId,
-                      child: Text(m.userName ?? m.userId),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.textHint,
+                  ),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('كل المستخدمين'),
                     ),
-                  ),
-                ],
-                onChanged: (value) => setState(() => _selectedUserId = value),
+                    ...members.map(
+                      (m) => DropdownMenuItem<String?>(
+                        value: m.userId,
+                        child: Text(m.userName ?? m.userId),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _selectedUserId = value),
+                ),
               ),
             ),
           ),
-        ),
         Expanded(
-          child: _buildTransactionsList(filteredItems),
+          child: _buildTransactionsList(
+            filteredItems,
+            canViewAllTransactions: canViewAllTransactions,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTransactionsList(List<TransactionModel> list) {
+  Widget _buildTransactionsList(
+    List<TransactionModel> list, {
+    required bool canViewAllTransactions,
+  }) {
     if (_items.isEmpty && _loading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -807,9 +859,11 @@ class _PaginatedTransactionsListState
     if (list.isEmpty) {
       return Center(
         child: Text(
-          _selectedUserId == null
+          canViewAllTransactions && _selectedUserId == null
               ? 'لا توجد معاملات بعد'
-              : 'لا توجد معاملات لهذا المستخدم',
+              : canViewAllTransactions
+                  ? 'لا توجد معاملات لهذا المستخدم'
+                  : 'لا توجد معاملات تخصك حاليا',
           style: const TextStyle(color: AppColors.textHint),
         ),
       );
@@ -1048,6 +1102,35 @@ Widget _tinyBalancePill({
         fontSize: 11,
         fontWeight: FontWeight.w700,
       ),
+    ),
+  );
+}
+
+Widget _headerMetaChip({
+  required IconData icon,
+  required String text,
+}) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceLight.withValues(alpha: 0.9),
+      borderRadius: BorderRadius.circular(999),
+      border: Border.all(color: const Color(0xFF3A3A64)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textHint),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     ),
   );
 }
