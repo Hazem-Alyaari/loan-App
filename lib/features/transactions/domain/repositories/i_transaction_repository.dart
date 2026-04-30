@@ -1,4 +1,5 @@
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/features/transactions/domain/models/settlement_proposal.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -26,6 +27,21 @@ abstract class ITransactionRepository {
   Future<List<TransactionModel>> fetchMemberApprovedTransactions(
     String groupId, {
     required String memberUserId,
+  });
+
+  Future<int> createSettlementProposals(String groupId);
+
+  Stream<List<SettlementProposal>> watchGroupSettlementProposals(
+    String groupId, {
+    String? userId,
+    bool includeResolved = false,
+  });
+
+  Future<void> respondToSettlementProposal({
+    required String groupId,
+    required String proposalId,
+    required String userId,
+    required bool approve,
   });
 
   /// Watch a single transaction.

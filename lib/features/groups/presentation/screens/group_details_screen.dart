@@ -715,6 +715,47 @@ Widget _settlementRow({
   );
 }
 
+String _settlementTimeRemaining(DateTime expiresAt, DateTime now) {
+  if (expiresAt.isBefore(now)) {
+    return 'انتهت صلاحية الاقتراح — يمكن إعادة الاكتشاف';
+  }
+  final left = expiresAt.difference(now);
+  final h = left.inHours;
+  final m = left.inMinutes.remainder(60);
+  if (h > 0) {
+    return 'متبقي: $h ساعة و $m دقيقة';
+  }
+  return 'متبقي: $m دقيقة';
+}
+
+Widget _proposalApprovalPill(String label, String status) {
+  final color = switch (status) {
+    'approved' => AppColors.success,
+    'rejected' => AppColors.error,
+    _ => AppColors.warning,
+  };
+  final text = switch (status) {
+    'approved' => 'موافق',
+    'rejected' => 'رافض',
+    _ => 'معلّق',
+  };
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      '$label: $text',
+      style: TextStyle(
+        color: color,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
 // ─── Transactions Tab ───────────────────────────────────────────────────────
 class _TransactionsTab extends ConsumerWidget {
   final String groupId;
@@ -736,6 +777,8 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
     final txAsync = ref.watch(groupTransactionsProvider(groupId));
     final currentMemberAsync = ref.watch(currentGroupMemberProvider(groupId));
     final groupAsync = ref.watch(groupDetailProvider(groupId));
+    final membersAsync = ref.watch(groupMembersProvider(groupId));
+    final proposalsAsync = ref.watch(groupSettlementProposalsProvider(groupId));
 
     if (authUser == null) {
       return const Center(
@@ -744,7 +787,11 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
       );
     }
 
-    if (txAsync.isLoading || currentMemberAsync.isLoading || groupAsync.isLoading) {
+    if (txAsync.isLoading ||
+        currentMemberAsync.isLoading ||
+        groupAsync.isLoading ||
+        membersAsync.isLoading ||
+        proposalsAsync.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
       );
@@ -768,8 +815,25 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
+    if (membersAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${membersAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
+    if (proposalsAsync.hasError) {
+      return Center(
+        child: Text('خطأ: ${proposalsAsync.error}',
+            style: const TextStyle(color: AppColors.textSecondary)),
+      );
+    }
 
     final group = groupAsync.value!;
+    final members = membersAsync.value ?? const [];
+    final memberNameMap = <String, String>{
+      for (final m in members) m.userId: (m.userName ?? m.userId),
+    };
+    final proposals = proposalsAsync.value ?? const [];
     final canViewAll = switch (currentMemberAsync.value?.role) {
       MemberRole.owner || MemberRole.admin => true,
       _ => false,
@@ -802,18 +866,172 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
     final monthEntries = monthly.entries.toList()
       ..sort((a, b) => b.key.compareTo(a.key));
 
-    if (monthEntries.isEmpty) {
-      return const Center(
-        child: Text(
-          'لا توجد معاملات معتمدة للتحليل الشهري',
-          style: TextStyle(color: AppColors.textHint),
-        ),
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
       children: [
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'اقتراح تصفية الديون الدائرية',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () async {
+                      final created = await ref
+                          .read(transactionControllerProvider.notifier)
+                          .createSettlementProposals(groupId);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            created > 0
+                                ? 'تم إنشاء $created اقتراح/اقتراحات تسوية (صلاحية 12 ساعة)'
+                                : 'لا توجد حلقات جديدة للتسوية حاليا',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('اكتشاف'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'أي عضو يمكنه البحث عن حلقة ديون وإنشاء اقتراح. الاقتراح يظهر لجميع الأعضاء وينتهي تلقائياً بعد 12 ساعة إن لم يكتمل التصويت.',
+                style: TextStyle(
+                  color: AppColors.textHint,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (proposals.isNotEmpty)
+          ...proposals.map(
+            (proposal) {
+              final now = DateTime.now();
+              final isParticipant =
+                  proposal.participants.contains(authUser.uid);
+              final canVote = isParticipant &&
+                  (proposal.approvals[authUser.uid] ?? 'pending') ==
+                      'pending' &&
+                  !proposal.expiresAt.isBefore(now);
+              return GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                  Text(
+                    'اقتراح تسوية • ${proposal.settlementAmount.toStringAsFixed(2)} ${group.currencyCode}',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    proposal.participants
+                        .map((id) => memberNameMap[id] ?? id)
+                        .join(' • '),
+                    style: const TextStyle(
+                      color: AppColors.textHint,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _settlementTimeRemaining(proposal.expiresAt, now),
+                    style: TextStyle(
+                      color: proposal.expiresAt.isBefore(now)
+                          ? AppColors.error
+                          : AppColors.warning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: proposal.participants
+                        .map(
+                          (id) => _proposalApprovalPill(
+                            memberNameMap[id] ?? id,
+                            proposal.approvals[id] ?? 'pending',
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  if (!isParticipant)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'للاطلاع فقط — التصويت للأطراف المعنية بالحلقة',
+                        style: TextStyle(
+                          color: AppColors.textHint,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  if (canVote)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => ref
+                                  .read(transactionControllerProvider.notifier)
+                                  .respondToSettlementProposal(
+                                    groupId: groupId,
+                                    proposalId: proposal.id,
+                                    approve: false,
+                                  ),
+                              icon: const Icon(Icons.close_rounded,
+                                  color: AppColors.error),
+                              label: const Text(
+                                'رفض',
+                                style: TextStyle(color: AppColors.error),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => ref
+                                  .read(transactionControllerProvider.notifier)
+                                  .respondToSettlementProposal(
+                                    groupId: groupId,
+                                    proposalId: proposal.id,
+                                    approve: true,
+                                  ),
+                              icon: const Icon(Icons.check_rounded),
+                              label: const Text('موافقة'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            );
+            },
+          ),
+        if (monthEntries.isEmpty)
+          const GlassCard(
+            child: Text(
+              'لا توجد معاملات معتمدة للتحليل الشهري (أو لا تظهر لصلاحياتك الحالية)',
+              style: TextStyle(color: AppColors.textHint),
+            ),
+          ),
         for (final entry in monthEntries)
           GlassCard(
             child: Column(
@@ -1294,6 +1512,7 @@ class _PaginatedTransactionsListState
         }
 
         final tx = list[index];
+        final isAutoSettlement = tx.createdByUserId == 'system:settlement';
         final statusType = switch (tx.status) {
           TransactionStatus.approved => StatusType.success,
           TransactionStatus.rejected => StatusType.error,
@@ -1338,6 +1557,27 @@ class _PaginatedTransactionsListState
                             fontWeight: FontWeight.w600,
                           ),
                         ),
+                        if (isAutoSettlement) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.info.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: const Text(
+                              'تسوية تلقائية',
+                              style: TextStyle(
+                                color: AppColors.info,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 2),
                         Text(
                           '${tx.creditorName ?? tx.creditorUserId} → ${tx.debtorName ?? tx.debtorUserId}',

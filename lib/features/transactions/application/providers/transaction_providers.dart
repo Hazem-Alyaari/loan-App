@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loan/core/enums/enums.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
+import 'package:loan/features/transactions/domain/models/settlement_proposal.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
 import 'package:loan/features/transactions/domain/repositories/i_transaction_repository.dart';
 import 'package:loan/features/transactions/infrastructure/repositories/transaction_repository.dart';
@@ -27,6 +28,13 @@ final memberApprovedTransactionsProvider = FutureProvider.family<
   return ref.watch(transactionRepositoryProvider).fetchMemberApprovedTransactions(
         params.groupId,
         memberUserId: params.userId,
+      );
+});
+
+final groupSettlementProposalsProvider =
+    StreamProvider.family<List<SettlementProposal>, String>((ref, groupId) {
+  return ref.watch(transactionRepositoryProvider).watchGroupSettlementProposals(
+        groupId,
       );
 });
 
@@ -88,6 +96,33 @@ class TransactionController extends AsyncNotifier<void> {
         groupId: groupId,
         transactionId: transactionId,
         status: TransactionStatus.cancelled,
+      ),
+    );
+  }
+
+  Future<int> createSettlementProposals(String groupId) async {
+    state = const AsyncLoading();
+    int created = 0;
+    state = await AsyncValue.guard(() async {
+      created = await _repo.createSettlementProposals(groupId);
+    });
+    return created;
+  }
+
+  Future<void> respondToSettlementProposal({
+    required String groupId,
+    required String proposalId,
+    required bool approve,
+  }) async {
+    final uid = ref.read(authStateProvider).value?.uid;
+    if (uid == null) return;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => _repo.respondToSettlementProposal(
+        groupId: groupId,
+        proposalId: proposalId,
+        userId: uid,
+        approve: approve,
       ),
     );
   }

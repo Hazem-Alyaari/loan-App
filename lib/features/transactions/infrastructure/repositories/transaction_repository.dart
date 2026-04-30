@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loan/core/enums/enums.dart';
 import 'package:loan/features/notifications/domain/models/app_notification.dart';
+import 'package:loan/features/transactions/domain/models/settlement_proposal.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
 import 'package:loan/features/transactions/domain/repositories/i_transaction_repository.dart';
 
@@ -15,6 +16,8 @@ class TransactionRepository implements ITransactionRepository {
 
   CollectionReference<Map<String, dynamic>> _txRef(String groupId) =>
       _groupDoc(groupId).collection('transactions');
+  CollectionReference<Map<String, dynamic>> _settlementRef(String groupId) =>
+      _groupDoc(groupId).collection('settlement_proposals');
 
   DocumentReference<Map<String, dynamic>> _userNotifRef(
     String userId,
@@ -113,6 +116,286 @@ class TransactionRepository implements ITransactionRepository {
     final list = merged.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  @override
+  Future<int> createSettlementProposals(String groupId) async {
+    final txSnapshot = await _txRef(groupId)
+        .where('status', isEqualTo: TransactionStatus.approved.name)
+        .get();
+    final approved = txSnapshot.docs.map(TransactionModel.fromFirestore).toList();
+    final debtGraph = <String, Map<String, double>>{};
+    for (final tx in approved) {
+      final debtorMap = debtGraph[tx.debtorUserId] ?? <String, double>{};
+      debtorMap[tx.creditorUserId] =
+          (debtorMap[tx.creditorUserId] ?? 0) + tx.amount;
+      debtGraph[tx.debtorUserId] = debtorMap;
+    }
+    _netDebtGraph(debtGraph);
+
+    final users = debtGraph.keys.toList();
+    final existingPending = await _settlementRef(groupId)
+        .where('finalStatus', isEqualTo: 'pending')
+        .get();
+    final existingKeys = existingPending.docs
+        .map((doc) => (doc.data()['participants'] as List<dynamic>? ?? const [])
+            .cast<String>()
+          ..sort())
+        .map((list) => list.join('|'))
+        .toSet();
+
+    var created = 0;
+    final now = DateTime.now();
+    for (final a in users) {
+      final aTo = debtGraph[a] ?? const <String, double>{};
+      for (final bEntry in aTo.entries) {
+        final b = bEntry.key;
+        final ab = bEntry.value;
+        if (ab <= 0) continue;
+        final bTo = debtGraph[b] ?? const <String, double>{};
+        for (final cEntry in bTo.entries) {
+          final c = cEntry.key;
+          final bc = cEntry.value;
+          if (bc <= 0 || c == a || c == b) continue;
+          final cToA = (debtGraph[c] ?? const <String, double>{})[a] ?? 0;
+          if (cToA <= 0) continue;
+
+          final participants = [a, b, c]..sort();
+          final signature = participants.join('|');
+          if (existingKeys.contains(signature)) continue;
+
+          final settleAmount = [ab, bc, cToA].reduce((x, y) => x < y ? x : y);
+          if (settleAmount <= 0) continue;
+          final proposalRef = _settlementRef(groupId).doc();
+          final approvals = {for (final userId in participants) userId: 'pending'};
+          final proposal = SettlementProposal(
+            id: proposalRef.id,
+            groupId: groupId,
+            participants: participants,
+            path: [
+              SettlementEdge(debtorUserId: a, creditorUserId: b, amount: ab),
+              SettlementEdge(debtorUserId: b, creditorUserId: c, amount: bc),
+              SettlementEdge(debtorUserId: c, creditorUserId: a, amount: cToA),
+            ],
+            settlementAmount: settleAmount,
+            approvals: approvals,
+            finalStatus: 'pending',
+            createdAt: now,
+            expiresAt: now.add(const Duration(hours: 12)),
+          );
+
+          final groupSnap = await _groupDoc(groupId).get();
+          final memberIds = (groupSnap.data()?['memberIds'] as List<dynamic>?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              <String>[];
+
+          final batch = _firestore.batch();
+          batch.set(proposalRef, proposal.toJson());
+          for (final userId in memberIds) {
+            final isParticipant = participants.contains(userId);
+            final notif = AppNotification(
+              id: 'settlement_${proposal.id}_$userId',
+              userId: userId,
+              groupId: groupId,
+              type: NotificationType.approvalRequest,
+              title: 'اقتراح تصفية ديون',
+              message: isParticipant
+                  ? 'تم اكتشاف تسوية ممكنة بقيمة ${settleAmount.toStringAsFixed(2)}. صلاحية الاقتراح 12 ساعة. راجع تبويب التحليل ووافق للتنفيذ.'
+                  : 'تم إنشاء اقتراح تصفية ديون في المجموعة. يمكنك متابعته من تبويب التحليل (صلاحية 12 ساعة).',
+              createdAt: now,
+            );
+            batch.set(_userNotifRef(userId, notif.id), notif.toJson());
+          }
+          await batch.commit();
+          existingKeys.add(signature);
+          created++;
+        }
+      }
+    }
+    return created;
+  }
+
+  void _netDebtGraph(Map<String, Map<String, double>> graph) {
+    final users = graph.keys.toList();
+    for (final a in users) {
+      final aMap = graph[a] ?? <String, double>{};
+      final bKeys = aMap.keys.toList();
+      for (final b in bKeys) {
+        final ab = (graph[a]?[b] ?? 0);
+        final ba = (graph[b]?[a] ?? 0);
+        if (ab <= 0 || ba <= 0) continue;
+        final minVal = ab < ba ? ab : ba;
+        final newAb = ab - minVal;
+        final newBa = ba - minVal;
+        if (newAb <= 0.0001) {
+          graph[a]?.remove(b);
+        } else {
+          graph[a]![b] = newAb;
+        }
+        if (newBa <= 0.0001) {
+          graph[b]?.remove(a);
+        } else {
+          graph[b]![a] = newBa;
+        }
+      }
+      if ((graph[a] ?? const {}).isEmpty) {
+        graph.remove(a);
+      }
+    }
+  }
+
+  @override
+  Stream<List<SettlementProposal>> watchGroupSettlementProposals(
+    String groupId, {
+    String? userId,
+    bool includeResolved = false,
+  }) {
+    // Avoid composite-index requirements by using a single optional Firestore
+    // filter, then applying remaining filters/sorting locally.
+    Query<Map<String, dynamic>> query = _settlementRef(groupId);
+    if (userId != null) {
+      query = query.where('participants', arrayContains: userId);
+    } else if (!includeResolved) {
+      query = query.where('finalStatus', isEqualTo: 'pending');
+    }
+
+    return query.snapshots().asyncMap((snapshot) async {
+      await _expirePendingSettlementProposals(snapshot);
+      final now = DateTime.now();
+      var items = snapshot.docs.map(SettlementProposal.fromFirestore).toList();
+      if (!includeResolved) {
+        items = items
+            .where(
+              (p) =>
+                  p.finalStatus == 'pending' && !p.expiresAt.isBefore(now),
+            )
+            .toList();
+      }
+      items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return items;
+    });
+  }
+
+  Future<void> _expirePendingSettlementProposals(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) async {
+    final now = DateTime.now();
+    final batch = _firestore.batch();
+    var hasWrites = false;
+    for (final doc in snapshot.docs) {
+      final p = SettlementProposal.fromFirestore(doc);
+      if (p.finalStatus == 'pending' && p.expiresAt.isBefore(now)) {
+        batch.update(doc.reference, {
+          'finalStatus': 'expired',
+          'resolvedAt': FieldValue.serverTimestamp(),
+        });
+        hasWrites = true;
+      }
+    }
+    if (hasWrites) {
+      await batch.commit();
+    }
+  }
+
+  @override
+  Future<void> respondToSettlementProposal({
+    required String groupId,
+    required String proposalId,
+    required String userId,
+    required bool approve,
+  }) async {
+    final proposalRef = _settlementRef(groupId).doc(proposalId);
+    final groupDoc = await _groupDoc(groupId).get();
+    final groupCurrency =
+        (groupDoc.data()?['currencyCode'] as String?) ?? 'USD';
+    final membersSnapshot = await _groupDoc(groupId).collection('members').get();
+    final memberNameById = <String, String>{
+      for (final doc in membersSnapshot.docs)
+        doc.id: ((doc.data()['userName'] as String?) ?? doc.id),
+    };
+    final doc = await proposalRef.get();
+    if (!doc.exists) throw Exception('الاقتراح غير موجود');
+    final proposal = SettlementProposal.fromFirestore(doc);
+    if (!proposal.isPending) return;
+    if (!proposal.participants.contains(userId)) {
+      throw Exception('غير مصرح لك بالتصويت على هذا الاقتراح');
+    }
+    if (proposal.expiresAt.isBefore(DateTime.now())) {
+      await proposalRef.update({
+        'finalStatus': 'expired',
+        'resolvedAt': FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    final batch = _firestore.batch();
+    final updatedApprovals = Map<String, String>.from(proposal.approvals)
+      ..[userId] = approve ? 'approved' : 'rejected';
+    batch.update(proposalRef, {'approvals': updatedApprovals});
+
+    if (!approve) {
+      batch.update(proposalRef, {
+        'finalStatus': 'rejected',
+        'resolvedAt': FieldValue.serverTimestamp(),
+      });
+      await batch.commit();
+      return;
+    }
+
+    final allApproved =
+        proposal.participants.every((id) => updatedApprovals[id] == 'approved');
+    if (!allApproved) {
+      await batch.commit();
+      return;
+    }
+
+    for (final edge in proposal.path) {
+      final txRef = _txRef(groupId).doc();
+      final tx = TransactionModel(
+        id: txRef.id,
+        groupId: groupId,
+        createdByUserId: 'system:settlement',
+        type: TransactionType.correction,
+        status: TransactionStatus.approved,
+        creditorUserId: edge.debtorUserId,
+        debtorUserId: edge.creditorUserId,
+        amount: proposal.settlementAmount,
+        currency: groupCurrency,
+        note: 'تسوية ديون تلقائية',
+        createdAt: DateTime.now(),
+        approvedAt: DateTime.now(),
+        creditorName: memberNameById[edge.debtorUserId],
+        debtorName: memberNameById[edge.creditorUserId],
+        createdByName: 'النظام',
+      );
+      batch.set(txRef, tx.toJson());
+      batch.update(_groupDoc(groupId), {
+        'balances.${edge.debtorUserId}':
+            FieldValue.increment(proposal.settlementAmount),
+        'balances.${edge.creditorUserId}':
+            FieldValue.increment(-proposal.settlementAmount),
+      });
+    }
+
+    batch.update(proposalRef, {
+      'finalStatus': 'approved',
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+    for (final participant in proposal.participants) {
+      final notif = AppNotification(
+        id: 'settlement_done_${proposal.id}_$participant',
+        userId: participant,
+        groupId: groupId,
+        type: NotificationType.balanceUpdated,
+        title: 'تم تنفيذ التسوية بنجاح',
+        message:
+            'اكتملت الموافقات وتم تنفيذ تسوية بقيمة ${proposal.settlementAmount.toStringAsFixed(2)}.',
+        createdAt: DateTime.now(),
+      );
+      batch.set(_userNotifRef(participant, notif.id), notif.toJson());
+    }
+    await batch.commit();
   }
 
   @override
