@@ -110,6 +110,8 @@ class TransactionRepository implements ITransactionRepository {
       throw Exception('المعاملة غير موجودة');
     }
     final tx = TransactionModel.fromFirestore(txDoc);
+    final wasApproved = tx.status == TransactionStatus.approved;
+    final isNowApproved = status == TransactionStatus.approved;
 
     final updates = <String, dynamic>{
       'status': status.name,
@@ -123,6 +125,21 @@ class TransactionRepository implements ITransactionRepository {
 
     final batch = _firestore.batch();
     batch.update(_txRef(groupId).doc(transactionId), updates);
+
+    // Keep persisted group balances synchronized with approval state changes.
+    // Approved -> apply amount (creditor +amount, debtor -amount)
+    // Reverted from approved -> rollback amount.
+    if (!wasApproved && isNowApproved) {
+      batch.update(_groupDoc(groupId), {
+        'balances.${tx.creditorUserId}': FieldValue.increment(tx.amount),
+        'balances.${tx.debtorUserId}': FieldValue.increment(-tx.amount),
+      });
+    } else if (wasApproved && !isNowApproved) {
+      batch.update(_groupDoc(groupId), {
+        'balances.${tx.creditorUserId}': FieldValue.increment(-tx.amount),
+        'balances.${tx.debtorUserId}': FieldValue.increment(tx.amount),
+      });
+    }
 
     if (status == TransactionStatus.approved ||
         status == TransactionStatus.rejected) {
@@ -150,6 +167,29 @@ class TransactionRepository implements ITransactionRepository {
           type: type,
           title: title,
           message: message,
+          createdAt: DateTime.now(),
+        );
+        batch.set(_userNotifRef(userId, notif.id), notif.toJson());
+      }
+    }
+
+    if (!wasApproved && isNowApproved) {
+      // Privacy: notify only users involved in this transaction.
+      final participantIds = <String>{
+        tx.createdByUserId,
+        tx.creditorUserId,
+        tx.debtorUserId,
+      };
+      for (final userId in participantIds) {
+        final notif = AppNotification(
+          id: 'tx_${tx.id}_balance_updated_$userId',
+          userId: userId,
+          groupId: tx.groupId,
+          transactionId: tx.id,
+          type: NotificationType.balanceUpdated,
+          title: 'تم تنفيذ العملية بنجاح',
+          message:
+              'تم اعتماد المعاملة وتحديث الرصيد تلقائيا بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.',
           createdAt: DateTime.now(),
         );
         batch.set(_userNotifRef(userId, notif.id), notif.toJson());

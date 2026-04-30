@@ -23,6 +23,34 @@ class NotificationRepository implements INotificationRepository {
   }
 
   @override
+  Future<
+      ({
+        List<AppNotification> items,
+        QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc,
+        bool hasMore,
+      })> fetchUserNotificationsPage(
+    String userId, {
+    QueryDocumentSnapshot<Map<String, dynamic>>? startAfter,
+    int limit = 8,
+  }) async {
+    Query<Map<String, dynamic>> query = _notifRef(userId)
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    final items = snapshot.docs.map((doc) => AppNotification.fromFirestore(doc)).toList();
+    return (
+      items: items,
+      lastDoc: snapshot.docs.isEmpty ? null : snapshot.docs.last,
+      hasMore: snapshot.docs.length == limit,
+    );
+  }
+
+  @override
   Future<void> markAsRead(String userId, String notificationId) async {
     await _notifRef(userId).doc(notificationId).update({'isRead': true});
   }
