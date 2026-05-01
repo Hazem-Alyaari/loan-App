@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl_phone_field/phone_number.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/core/utils/phone_submit_format.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
+import 'package:loan/core/widgets/international_phone_form_field.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
 
@@ -18,6 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  PhoneNumber? _savedPhone;
   bool _obscurePassword = true;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -134,22 +138,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         key: _formKey,
                         child: Column(
                           children: [
-                            TextFormField(
+                            InternationalPhoneFormField(
                               controller: _phoneController,
-                              keyboardType: TextInputType.phone,
-                              style: const TextStyle(
-                                  color: AppColors.textPrimary),
-                              decoration: const InputDecoration(
-                                hintText: 'رقم الهاتف',
-                                prefixIcon: Icon(Icons.phone_outlined,
-                                    color: AppColors.textHint),
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) {
-                                  return 'رقم الهاتف مطلوب';
-                                }
-                                return null;
-                              },
+                              onSaved: (p) => _savedPhone = p,
                             ),
                             const SizedBox(height: 16),
                             TextFormField(
@@ -287,12 +278,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   void _handleSignIn() {
-    if (_formKey.currentState!.validate()) {
-      ref.read(authControllerProvider.notifier).signInWithPhone(
-            _phoneController.text.trim(),
-            _passwordController.text,
-          );
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
+    final phone = _savedPhone;
+    if (phone == null || phone.number.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('رقم الهاتف مطلوب'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
     }
+    ref.read(authControllerProvider.notifier).signInWithPhone(
+          phoneToStoredDigits(phone),
+          _passwordController.text,
+        );
   }
 
   void _handleGoogleSignIn() {

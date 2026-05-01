@@ -211,10 +211,10 @@ class AuthRepository implements IAuthRepository {
   }
 
   String _normalizePhone(String phone) {
-    final digitsOnly = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-    if (digitsOnly.isEmpty) {
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
       throw Exception('رقم الهاتف مطلوب');
     }
-    return digitsOnly;
+    return digits;
   }
 }
