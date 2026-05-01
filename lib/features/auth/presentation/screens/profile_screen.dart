@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
+import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -98,6 +99,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.privacy_tip_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text(
+                    'سياسة الخصوصية',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'اطّلع على كيفية استخدام بياناتك',
+                    style: TextStyle(color: AppColors.textHint, fontSize: 12),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_left_rounded,
+                    color: AppColors.textHint,
+                  ),
+                  onTap: () => context.openPrivacyPolicy(),
+                ),
+                const SizedBox(height: 16),
                 GlassCard(
                   child: Form(
                     key: _formKey,

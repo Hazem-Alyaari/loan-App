@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
+import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -263,7 +264,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => context.openPrivacyPolicy(),
+                        child: const Text(
+                          'سياسة الخصوصية',
+                          style: TextStyle(
+                            color: AppColors.textHint,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),

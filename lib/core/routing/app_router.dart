@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/auth/presentation/screens/login_screen.dart';
+import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
 import 'package:loan/features/auth/presentation/screens/profile_screen.dart';
 import 'package:loan/features/auth/presentation/screens/register_screen.dart';
 import 'package:loan/features/groups/presentation/screens/groups_list_screen.dart';
@@ -12,22 +13,39 @@ import 'package:loan/features/transactions/presentation/screens/create_transacti
 import 'package:loan/features/transactions/presentation/screens/transaction_details_screen.dart';
 import 'package:loan/features/notifications/presentation/screens/notifications_screen.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+/// Rebuilds [GoRouter] redirect logic when auth changes without disposing/recreating
+/// the router (recreating [GoRouter] on every auth tick breaks matching on web).
+class _AuthRefreshNotifier extends ChangeNotifier {
+  _AuthRefreshNotifier(Ref ref) {
+    ref.listen(authStateProvider, (_, _) => notifyListeners());
+  }
+}
 
-  return GoRouter(
+final routerProvider = Provider<GoRouter>((ref) {
+  final refresh = _AuthRefreshNotifier(ref);
+  final router = GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
+    refreshListenable: refresh,
     redirect: (context, state) {
-      final isLoggedIn = authState.value != null;
-      final isAuthRoute =
-          state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final auth = ref.read(authStateProvider);
+      final isLoggedIn = auth.value != null;
+      final loc = state.uri.path;
+      final isPublicAuthRoute = loc == '/login' ||
+          loc == '/register' ||
+          loc == '/privacy';
 
-      if (!isLoggedIn && !isAuthRoute) return '/login';
-      if (isLoggedIn && isAuthRoute) return '/groups';
+      if (!isLoggedIn && !isPublicAuthRoute) return '/login';
+      if (isLoggedIn && (loc == '/login' || loc == '/register')) {
+        return '/groups';
+      }
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/',
+        redirect: (context, state) => '/login',
+      ),
       // ── Auth ────────────────────────────────────────────────
       GoRoute(
         path: '/login',
@@ -36,6 +54,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const PrivacyPolicyScreen(),
       ),
       GoRoute(
         path: '/profile',
@@ -94,4 +116,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ),
   );
+  ref.onDispose(router.dispose);
+  return router;
 });

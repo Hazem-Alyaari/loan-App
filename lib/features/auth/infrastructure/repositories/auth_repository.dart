@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:loan/core/enums/enums.dart';
 import 'package:loan/features/auth/domain/models/app_user.dart';
 import 'package:loan/features/auth/domain/repositories/i_auth_repository.dart';
@@ -144,7 +145,9 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<AppUser> signInWithGoogle() async {
     final googleProvider = fb.GoogleAuthProvider();
-    final credential = await _auth.signInWithProvider(googleProvider);
+    final fb.UserCredential credential = kIsWeb
+        ? await _auth.signInWithPopup(googleProvider)
+        : await _auth.signInWithProvider(googleProvider);
     final user = credential.user!;
 
     // Check if user doc exists; if not, create it.
