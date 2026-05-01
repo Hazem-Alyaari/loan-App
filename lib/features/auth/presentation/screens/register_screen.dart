@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl_phone_field/phone_number.dart';
+import 'package:loan/core/locale/app_locale.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/core/widgets/auth_locale_menu_button.dart';
 import 'package:loan/core/utils/phone_submit_format.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/core/widgets/international_phone_form_field.dart';
@@ -63,6 +66,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState is AsyncLoading;
 
@@ -90,15 +94,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
             ],
           ),
         ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Logo
@@ -125,7 +132,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       ),
                       const SizedBox(height: 28),
                       Text(
-                        'إنشاء حساب',
+                        l10n.registerTitle,
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
@@ -133,7 +140,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'ابدأ إدارة مصروفات مجموعتك اليوم',
+                        l10n.registerSubtitle,
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 40),
@@ -146,14 +153,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               controller: _nameController,
                               style: const TextStyle(
                                   color: AppColors.textPrimary),
-                              decoration: const InputDecoration(
-                                hintText: 'الاسم الكامل',
+                              decoration: InputDecoration(
+                                hintText: l10n.hintFullName,
                                 prefixIcon: Icon(Icons.person_outline,
                                     color: AppColors.textHint),
                               ),
                               validator: (v) {
                                 if (v == null || v.trim().isEmpty) {
-                                  return 'الاسم مطلوب';
+                                  return l10n.valNameRequired;
                                 }
                                 return null;
                               },
@@ -161,6 +168,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                             const SizedBox(height: 16),
                             InternationalPhoneFormField(
                               controller: _phoneController,
+                              languageCode:
+                                  ref.watch(appLocaleProvider).languageCode,
                               onSaved: (p) => _savedPhone = p,
                             ),
                             const SizedBox(height: 16),
@@ -170,7 +179,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               style: const TextStyle(
                                   color: AppColors.textPrimary),
                               decoration: InputDecoration(
-                                hintText: 'كلمة المرور',
+                                hintText: l10n.hintPassword,
                                 prefixIcon: const Icon(Icons.lock_outline,
                                     color: AppColors.textHint),
                                 suffixIcon: IconButton(
@@ -186,10 +195,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               ),
                               validator: (v) {
                                 if (v == null || v.isEmpty) {
-                                  return 'كلمة المرور مطلوبة';
+                                  return l10n.valPasswordRequired;
                                 }
                                 if (v.length < 6) {
-                                  return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                                  return l10n.valPasswordMin6;
                                 }
                                 return null;
                               },
@@ -201,7 +210,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               style: const TextStyle(
                                   color: AppColors.textPrimary),
                               decoration: InputDecoration(
-                                hintText: 'تأكيد كلمة المرور',
+                                hintText: l10n.hintConfirmPassword,
                                 prefixIcon: const Icon(
                                     Icons.lock_outline,
                                     color: AppColors.textHint),
@@ -218,7 +227,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                               ),
                               validator: (v) {
                                 if (v != _passwordController.text) {
-                                  return 'كلمتا المرور غير متطابقتين';
+                                  return l10n.valPasswordMismatch;
                                 }
                                 return null;
                               },
@@ -229,7 +238,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       const SizedBox(height: 32),
 
                       GradientButton(
-                        text: 'إنشاء الحساب',
+                        text: l10n.createAccountBtn,
                         isLoading: isLoading,
                         onPressed: isLoading ? null : _handleRegister,
                       ),
@@ -239,15 +248,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'لديك حساب بالفعل؟ ',
-                            style: TextStyle(color: AppColors.textSecondary),
+                          Text(
+                            l10n.haveAccount,
+                            style: const TextStyle(color: AppColors.textSecondary),
                           ),
                           GestureDetector(
                             onTap: () => context.pop(),
-                            child: const Text(
-                              'تسجيل الدخول',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.signInLink,
+                              style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -258,9 +267,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: () => context.openPrivacyPolicy(),
-                        child: const Text(
-                          'سياسة الخصوصية',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.privacyPolicy,
+                          style: const TextStyle(
                             color: AppColors.textHint,
                             fontWeight: FontWeight.w600,
                           ),
@@ -269,10 +278,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
                       const SizedBox(height: 8),
                     ],
                   ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  child: const AuthLocaleMenuButton(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -284,8 +306,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen>
     final phone = _savedPhone;
     if (phone == null || phone.number.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('رقم الهاتف مطلوب'),
+        SnackBar(
+          content: Text(context.l10n.snackPhoneRequired),
           backgroundColor: AppColors.error,
         ),
       );

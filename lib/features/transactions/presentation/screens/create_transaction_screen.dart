@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/l10n/app_localizations.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/groups/application/providers/group_providers.dart';
@@ -38,6 +40,7 @@ class _CreateTransactionScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
     final groupAsync = ref.watch(groupDetailProvider(widget.groupId));
     final controllerState = ref.watch(transactionControllerProvider);
@@ -45,7 +48,7 @@ class _CreateTransactionScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('معاملة جديدة'),
+        title: Text(l10n.txnNewTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -63,17 +66,17 @@ class _CreateTransactionScreenState
           data: (members) {
             final currentUser = ref.watch(authStateProvider).value;
             if (currentUser == null) {
-              return const Center(
+              return Center(
                 child: Text(
-                  'المستخدم غير مسجل الدخول',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  l10n.userNotLoggedIn,
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               );
             }
             final currentMember =
                 members.where((m) => m.userId == currentUser.uid).firstOrNull;
             final currentUserName =
-                currentMember?.userName ?? currentUser.displayName ?? 'أنا';
+                currentMember?.userName ?? currentUser.displayName ?? l10n.me;
             final selectableDebtors =
                 members.where((m) => m.userId != currentUser.uid).toList();
 
@@ -85,7 +88,7 @@ class _CreateTransactionScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Transaction type selector
-                    Text('النوع',
+                    Text(l10n.txnType,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     Row(
@@ -115,7 +118,7 @@ class _CreateTransactionScreenState
                               ),
                               child: Center(
                                 child: Text(
-                                  _transactionTypeLabel(type),
+                                  _transactionTypeLabel(type, l10n),
                                   style: TextStyle(
                                     color: isSelected
                                         ? AppColors.primary
@@ -135,7 +138,7 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 28),
 
                     // Amount
-                    Text('المبلغ',
+                    Text(l10n.amountLabel,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -154,7 +157,7 @@ class _CreateTransactionScreenState
                         fontWeight: FontWeight.w700,
                       ),
                       decoration: InputDecoration(
-                        hintText: '0.00',
+                        hintText: l10n.amountHint,
                         hintStyle: TextStyle(
                           color: AppColors.textHint.withValues(alpha: 0.5),
                           fontSize: 24,
@@ -177,18 +180,18 @@ class _CreateTransactionScreenState
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'المبلغ مطلوب';
+                        if (v == null || v.isEmpty) return l10n.valAmountRequired;
                         final amount = double.tryParse(v);
                         if (amount == null || amount == 0) {
-                          return 'أدخل مبلغا صحيحا';
+                          return l10n.valAmountInvalid;
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'إذا كان المبلغ سالبا سيتم عكس الدائن والمدين تلقائيا',
-                      style: TextStyle(
+                    Text(
+                      l10n.amountNegativeHint,
+                      style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 12,
                       ),
@@ -196,16 +199,16 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 28),
 
                     // Creditor
-                    Text('الدائن (المقرض)',
+                    Text(l10n.creditorLabel,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     TextFormField(
                       enabled: false,
                       initialValue: currentUserName,
                       style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(
-                        hintText: 'الدائن الحالي',
-                        prefixIcon: Icon(
+                      decoration: InputDecoration(
+                        hintText: l10n.creditorHint,
+                        prefixIcon: const Icon(
                           Icons.person_outline,
                           color: AppColors.textHint,
                         ),
@@ -214,19 +217,19 @@ class _CreateTransactionScreenState
                     const SizedBox(height: 28),
 
                     // Debtor
-                    Text('المدين (المقترض)',
+                    Text(l10n.debtorLabel,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     _MemberDropdown(
                       members: selectableDebtors,
                       value: _debtorId,
-                      hint: 'اختر المدين',
+                      hint: l10n.debtorHint,
                       onChanged: (v) => setState(() => _debtorId = v),
                     ),
                     const SizedBox(height: 28),
 
                     // Note
-                    Text('ملاحظة (اختياري)',
+                    Text(l10n.noteLabel,
                         style: Theme.of(context).textTheme.titleSmall),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -237,16 +240,16 @@ class _CreateTransactionScreenState
                         LengthLimitingTextInputFormatter(_maxNoteLength),
                       ],
                       style: const TextStyle(color: AppColors.textPrimary),
-                      decoration: const InputDecoration(
-                        hintText: 'ملاحظة عن سبب المعاملة',
-                        prefixIcon: Icon(Icons.notes_outlined,
+                      decoration: InputDecoration(
+                        hintText: l10n.noteHint,
+                        prefixIcon: const Icon(Icons.notes_outlined,
                             color: AppColors.textHint),
                       ),
                     ),
                     const SizedBox(height: 40),
 
                     GradientButton(
-                      text: 'إنشاء المعاملة',
+                      text: l10n.createTxnBtn,
                       icon: Icons.send_rounded,
                       isLoading: isLoading,
                       onPressed: isLoading
@@ -266,7 +269,7 @@ class _CreateTransactionScreenState
           loading: () => const Center(
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
-          error: (e, _) => Center(child: Text('خطأ: $e')),
+          error: (e, _) => Center(child: Text(l10n.txnError(e.toString()))),
         ),
       ),
     );
@@ -279,10 +282,11 @@ class _CreateTransactionScreenState
     List members,
   ) async {
     if (!_formKey.currentState!.validate()) return;
+    final l10n = context.l10n;
     if (_debtorId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى اختيار المدين'),
+        SnackBar(
+          content: Text(l10n.pickDebtorSnack),
           backgroundColor: AppColors.error,
         ),
       );
@@ -290,8 +294,8 @@ class _CreateTransactionScreenState
     }
     if (_debtorId == currentUserId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لا يمكن اختيار نفسك كمدين'),
+        SnackBar(
+          content: Text(l10n.selfDebtorSnack),
           backgroundColor: AppColors.error,
         ),
       );
@@ -303,8 +307,8 @@ class _CreateTransactionScreenState
     final rawAmount = double.parse(_amountController.text.trim());
     if (_noteController.text.trim().length > _maxNoteLength) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('النص طويل جدا، الحد الأقصى للملاحظة 250 حرف'),
+        SnackBar(
+          content: Text(l10n.noteTooLongSnack),
           backgroundColor: AppColors.error,
         ),
       );
@@ -358,11 +362,11 @@ class _CreateTransactionScreenState
   }
 }
 
-String _transactionTypeLabel(TransactionType type) {
+String _transactionTypeLabel(TransactionType type, AppLocalizations l10n) {
   return switch (type) {
-    TransactionType.loan => 'قرض',
-    TransactionType.repayment => 'سداد',
-    TransactionType.correction => 'تصحيح',
+    TransactionType.loan => l10n.typeLoan,
+    TransactionType.repayment => l10n.typeRepayment,
+    TransactionType.correction => l10n.typeCorrection,
   };
 }
 

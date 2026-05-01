@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/bilingual.dart';
 import 'package:loan/features/auth/domain/models/app_user.dart';
 import 'package:loan/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:loan/firebase_options.dart';
@@ -10,12 +10,15 @@ import 'package:loan/firebase_options.dart';
 class AuthRepository implements IAuthRepository {
   final fb.FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final Bilingual _bx;
 
   AuthRepository({
     fb.FirebaseAuth? auth,
     FirebaseFirestore? firestore,
+    required bool isArabic,
   })  : _auth = auth ?? fb.FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _firestore = firestore ?? FirebaseFirestore.instance,
+        _bx = Bilingual(isArabic: isArabic);
 
   CollectionReference<Map<String, dynamic>> get _usersRef =>
       _firestore.collection('users');
@@ -38,7 +41,7 @@ class AuthRepository implements IAuthRepository {
     final user = credential.user!;
     final profile = await getUserProfile(user.uid);
     if (profile != null) return profile;
-    throw Exception('لم يتم العثور على ملف المستخدم');
+    throw Exception(_bx.userProfileNotFound);
   }
 
   @override
@@ -57,7 +60,7 @@ class AuthRepository implements IAuthRepository {
       );
     } on fb.FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        throw Exception('رقم الهاتف مسجل بالفعل');
+        throw Exception(_bx.phoneAlreadyRegistered);
       }
       rethrow;
     }
@@ -143,34 +146,6 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<AppUser> signInWithGoogle() async {
-    final googleProvider = fb.GoogleAuthProvider();
-    final fb.UserCredential credential = kIsWeb
-        ? await _auth.signInWithPopup(googleProvider)
-        : await _auth.signInWithProvider(googleProvider);
-    final user = credential.user!;
-
-    // Check if user doc exists; if not, create it.
-    final doc = await _usersRef.doc(user.uid).get();
-    if (doc.exists) {
-      return AppUser.fromFirestore(doc);
-    }
-
-    final appUser = AppUser(
-      id: user.uid,
-      fullName: user.displayName ?? 'مستخدم',
-      email: user.email ?? '',
-      phoneNumber: user.phoneNumber,
-      authProvider: AuthProvider.google,
-      providerId: user.uid,
-      createdAt: DateTime.now(),
-    );
-
-    await _usersRef.doc(user.uid).set(appUser.toJson());
-    return appUser;
-  }
-
-  @override
   Future<void> signOut() async {
     await _auth.signOut();
   }
@@ -194,11 +169,11 @@ class AuthRepository implements IAuthRepository {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception('المستخدم غير مسجل الدخول');
+      throw Exception(_bx.userNotSignedIn);
     }
     final email = user.email;
     if (email == null || email.isEmpty) {
-      throw Exception('الحساب الحالي لا يدعم تغيير كلمة المرور');
+      throw Exception(_bx.passwordChangeNotSupported);
     }
 
     final credential = fb.EmailAuthProvider.credential(
@@ -213,7 +188,7 @@ class AuthRepository implements IAuthRepository {
   String _normalizePhone(String phone) {
     final digits = phone.replaceAll(RegExp(r'\D'), '');
     if (digits.isEmpty) {
-      throw Exception('رقم الهاتف مطلوب');
+      throw Exception(_bx.phoneRequired);
     }
     return digits;
   }

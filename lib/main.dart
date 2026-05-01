@@ -3,8 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:loan/core/locale/app_locale.dart';
 import 'package:loan/core/routing/app_router.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/l10n/app_localizations.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -35,13 +37,15 @@ class LoanApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(appLocaleProvider);
 
     return MaterialApp.router(
-      title: 'لون تراك',
+      title: 'Loan Track',
       debugShowCheckedModeBanner: false,
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar')],
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

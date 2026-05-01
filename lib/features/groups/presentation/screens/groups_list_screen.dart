@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
@@ -13,6 +14,7 @@ class GroupsListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final groupsAsync = ref.watch(userGroupsProvider);
     final unreadCount = ref.watch(unreadNotificationCountProvider);
 
@@ -40,7 +42,7 @@ class GroupsListScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'مجموعاتي',
+                            l10n.groupsTitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineMedium
@@ -48,7 +50,7 @@ class GroupsListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'إدارة المصروفات الجماعية',
+                            l10n.groupsSubtitle,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
@@ -134,18 +136,18 @@ class GroupsListScreen extends ConsumerWidget {
                                   AppColors.textHint.withValues(alpha: 0.4),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
-                              'لا توجد مجموعات بعد',
-                              style: TextStyle(
+                            Text(
+                              l10n.emptyGroupsTitle,
+                              style: const TextStyle(
                                 color: AppColors.textSecondary,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
-                              'أنشئ أول مجموعة للبدء',
-                              style: TextStyle(
+                            Text(
+                              l10n.emptyGroupsHint,
+                              style: const TextStyle(
                                 color: AppColors.textHint,
                                 fontSize: 14,
                               ),
@@ -177,7 +179,7 @@ class GroupsListScreen extends ConsumerWidget {
                 ),
                 error: (err, _) => SliverFillRemaining(
                   child: Center(
-                    child: Text('خطأ: $err',
+                    child: Text(l10n.errorPrefix(err.toString()),
                         style:
                             const TextStyle(color: AppColors.textSecondary)),
                   ),
@@ -190,7 +192,7 @@ class GroupsListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/create-group'),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('مجموعة جديدة'),
+        label: Text(l10n.newGroupFab),
       ),
     );
   }
@@ -203,6 +205,7 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final memberCount = group.memberIds.length;
 
     return GlassCard(
@@ -241,7 +244,7 @@ class _GroupCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$memberCount عضو • ${group.currencyCode}',
+                      l10n.membersCountLine(memberCount, group.currencyCode),
                       style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 13,

@@ -26,9 +26,6 @@ abstract class IAuthRepository {
     required String password,
   });
 
-  /// Sign in with Google.
-  Future<AppUser> signInWithGoogle();
-
   /// Sign out the current user.
   Future<void> signOut();
 

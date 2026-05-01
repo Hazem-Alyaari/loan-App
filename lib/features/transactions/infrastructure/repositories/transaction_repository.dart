@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/bilingual.dart';
 import 'package:loan/features/notifications/domain/models/app_notification.dart';
 import 'package:loan/features/transactions/domain/models/settlement_proposal.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
@@ -7,9 +8,13 @@ import 'package:loan/features/transactions/domain/repositories/i_transaction_rep
 
 class TransactionRepository implements ITransactionRepository {
   final FirebaseFirestore _firestore;
+  final Bilingual _bx;
 
-  TransactionRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  TransactionRepository({
+    FirebaseFirestore? firestore,
+    required bool isArabic,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _bx = Bilingual(isArabic: isArabic);
 
   DocumentReference<Map<String, dynamic>> _groupDoc(String groupId) =>
       _firestore.collection('groups').doc(groupId);
@@ -42,9 +47,14 @@ class TransactionRepository implements ITransactionRepository {
         groupId: transaction.groupId,
         transactionId: transaction.id,
         type: NotificationType.approvalRequest,
-        title: 'معاملة جديدة بانتظار موافقتك',
-        message:
-            'قام ${transaction.createdByName ?? transaction.creditorName ?? 'أحد الأعضاء'} بإضافة معاملة بمبلغ ${transaction.amount.toStringAsFixed(2)} ${transaction.currency}.',
+        title: _bx.pendingApprovalTitle(),
+        message: _bx.pendingApprovalMessage(
+          transaction.createdByName ??
+              transaction.creditorName ??
+              _bx.memberAddedPlaceholder,
+          transaction.amount.toStringAsFixed(2),
+          transaction.currency,
+        ),
         createdAt: DateTime.now(),
       );
 
@@ -199,10 +209,10 @@ class TransactionRepository implements ITransactionRepository {
               userId: userId,
               groupId: groupId,
               type: NotificationType.approvalRequest,
-              title: 'اقتراح تصفية ديون',
+              title: _bx.settlementProposalTitle,
               message: isParticipant
-                  ? 'تم اكتشاف تسوية ممكنة بقيمة ${settleAmount.toStringAsFixed(2)}. صلاحية الاقتراح 12 ساعة. راجع تبويب التحليل ووافق للتنفيذ.'
-                  : 'تم إنشاء اقتراح تصفية ديون في المجموعة. يمكنك متابعته من تبويب التحليل (صلاحية 12 ساعة).',
+                  ? _bx.settlementParticipantBody(settleAmount.toStringAsFixed(2))
+                  : _bx.settlementObserverBody(),
               createdAt: now,
             );
             batch.set(_userNotifRef(userId, notif.id), notif.toJson());
@@ -315,11 +325,11 @@ class TransactionRepository implements ITransactionRepository {
         doc.id: ((doc.data()['userName'] as String?) ?? doc.id),
     };
     final doc = await proposalRef.get();
-    if (!doc.exists) throw Exception('الاقتراح غير موجود');
+    if (!doc.exists) throw Exception(_bx.proposalNotFound);
     final proposal = SettlementProposal.fromFirestore(doc);
     if (!proposal.isPending) return;
     if (!proposal.participants.contains(userId)) {
-      throw Exception('غير مصرح لك بالتصويت على هذا الاقتراح');
+      throw Exception(_bx.notAuthorizedToVote);
     }
     if (proposal.expiresAt.isBefore(DateTime.now())) {
       await proposalRef.update({
@@ -362,12 +372,12 @@ class TransactionRepository implements ITransactionRepository {
         debtorUserId: edge.creditorUserId,
         amount: proposal.settlementAmount,
         currency: groupCurrency,
-        note: 'تسوية ديون تلقائية',
+        note: _bx.autoSettlementNote,
         createdAt: DateTime.now(),
         approvedAt: DateTime.now(),
         creditorName: memberNameById[edge.debtorUserId],
         debtorName: memberNameById[edge.creditorUserId],
-        createdByName: 'النظام',
+        createdByName: _bx.systemName,
       );
       batch.set(txRef, tx.toJson());
       batch.update(_groupDoc(groupId), {
@@ -388,9 +398,10 @@ class TransactionRepository implements ITransactionRepository {
         userId: participant,
         groupId: groupId,
         type: NotificationType.balanceUpdated,
-        title: 'تم تنفيذ التسوية بنجاح',
-        message:
-            'اكتملت الموافقات وتم تنفيذ تسوية بقيمة ${proposal.settlementAmount.toStringAsFixed(2)}.',
+        title: _bx.settlementExecutedTitle,
+        message: _bx.settlementExecutedBody(
+          proposal.settlementAmount.toStringAsFixed(2),
+        ),
         createdAt: DateTime.now(),
       );
       batch.set(_userNotifRef(participant, notif.id), notif.toJson());
@@ -414,7 +425,7 @@ class TransactionRepository implements ITransactionRepository {
   }) async {
     final txDoc = await _txRef(groupId).doc(transactionId).get();
     if (!txDoc.exists) {
-      throw Exception('المعاملة غير موجودة');
+      throw Exception(_bx.transactionNotFound);
     }
     final tx = TransactionModel.fromFirestore(txDoc);
     final wasApproved = tx.status == TransactionStatus.approved;
@@ -454,11 +465,20 @@ class TransactionRepository implements ITransactionRepository {
           ? NotificationType.transactionApproved
           : NotificationType.transactionRejected;
       final title = status == TransactionStatus.approved
-          ? 'تمت الموافقة على المعاملة'
-          : 'تم رفض المعاملة';
+          ? _bx.approvedTitle
+          : _bx.rejectedTitle;
+      final debtorLabel = tx.debtorName ?? _bx.debtorFallback;
       final message = status == TransactionStatus.approved
-          ? 'وافق ${tx.debtorName ?? 'المدين'} على معاملتك بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.'
-          : 'رفض ${tx.debtorName ?? 'المدين'} معاملتك بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.';
+          ? _bx.approvedBody(
+              debtorLabel,
+              tx.amount.toStringAsFixed(2),
+              tx.currency,
+            )
+          : _bx.rejectedBody(
+              debtorLabel,
+              tx.amount.toStringAsFixed(2),
+              tx.currency,
+            );
 
       final notifyUserIds = <String>{
         tx.createdByUserId,
@@ -494,9 +514,11 @@ class TransactionRepository implements ITransactionRepository {
           groupId: tx.groupId,
           transactionId: tx.id,
           type: NotificationType.balanceUpdated,
-          title: 'تم تنفيذ العملية بنجاح',
-          message:
-              'تم اعتماد المعاملة وتحديث الرصيد تلقائيا بمبلغ ${tx.amount.toStringAsFixed(2)} ${tx.currency}.',
+          title: _bx.balanceUpdatedTitle,
+          message: _bx.balanceUpdatedBody(
+            tx.amount.toStringAsFixed(2),
+            tx.currency,
+          ),
           createdAt: DateTime.now(),
         );
         batch.set(_userNotifRef(userId, notif.id), notif.toJson());

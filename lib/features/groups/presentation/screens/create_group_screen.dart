@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/features/groups/application/providers/group_providers.dart';
@@ -28,6 +29,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final controllerState = ref.watch(groupControllerProvider);
     final isLoading = controllerState is AsyncLoading;
 
@@ -44,7 +46,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إنشاء مجموعة'),
+        title: Text(l10n.createGroupTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -88,7 +90,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
                 // Name
                 Text(
-                  'اسم المجموعة',
+                  l10n.groupNameLabel,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -99,17 +101,17 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                     LengthLimitingTextInputFormatter(_maxGroupNameLength),
                   ],
                   style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: const InputDecoration(
-                    hintText: 'مثال: رحلة نهاية الأسبوع',
+                  decoration: InputDecoration(
+                    hintText: l10n.groupNameHint,
                     prefixIcon: Icon(Icons.edit_outlined,
                         color: AppColors.textHint),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
-                      return 'اسم المجموعة مطلوب';
+                      return l10n.valGroupNameRequired;
                     }
                     if (v.trim().length > _maxGroupNameLength) {
-                      return 'اسم المجموعة طويل جدا';
+                      return l10n.valGroupNameTooLong;
                     }
                     return null;
                   },
@@ -118,7 +120,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
 
                 // Currency
                 Text(
-                  'العملة',
+                  l10n.currencyLabel,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 10),
@@ -156,7 +158,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                 const Spacer(),
 
                 GradientButton(
-                  text: 'إنشاء المجموعة',
+                  text: l10n.createGroupBtn,
                   icon: Icons.add_rounded,
                   isLoading: isLoading,
                   onPressed: isLoading ? null : _handleCreate,

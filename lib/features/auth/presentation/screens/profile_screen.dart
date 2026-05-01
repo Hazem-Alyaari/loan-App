@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:loan/core/locale/app_locale.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
+import 'package:loan/l10n/app_localizations.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
 
@@ -29,13 +32,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final profileAsync = ref.watch(currentUserProfileProvider);
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState is AsyncLoading;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ملفي الشخصي'),
+        title: Text(l10n.profileTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -52,10 +56,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: profileAsync.when(
           data: (profile) {
             if (profile == null) {
-              return const Center(
+              return Center(
                 child: Text(
-                  'تعذر العثور على الملف الشخصي',
-                  style: TextStyle(color: AppColors.textSecondary),
+                  l10n.profileMissing,
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               );
             }
@@ -77,19 +81,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       const SizedBox(height: 12),
                       _ProfileRow(
-                        label: 'الهاتف',
+                        label: l10n.labelPhone,
                         value: profile.phoneNumber ?? '-',
                       ),
                       const SizedBox(height: 10),
                       _ProfileRow(
-                        label: 'طريقة تسجيل الدخول',
-                        value: _providerLabel(profile.authProvider.name),
+                        label: l10n.labelAuthMethod,
+                        value: _providerLabel(l10n, profile.authProvider.name),
                       ),
                       if (profile.mustChangePassword) ...[
                         const SizedBox(height: 14),
-                        const Text(
-                          'حسابك يستخدم كلمة المرور الافتراضية. يرجى تغييرها الآن.',
-                          style: TextStyle(
+                        Text(
+                          l10n.defaultPasswordBanner,
+                          style: const TextStyle(
                             color: AppColors.warning,
                             fontWeight: FontWeight.w600,
                           ),
@@ -105,16 +109,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Icons.privacy_tip_outlined,
                     color: AppColors.primary,
                   ),
-                  title: const Text(
-                    'سياسة الخصوصية',
-                    style: TextStyle(
+                  title: Text(
+                    l10n.privacyRelated,
+                    style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  subtitle: const Text(
-                    'اطّلع على كيفية استخدام بياناتك',
-                    style: TextStyle(color: AppColors.textHint, fontSize: 12),
+                  subtitle: Text(
+                    l10n.privacyRelatedSub,
+                    style: const TextStyle(color: AppColors.textHint, fontSize: 12),
                   ),
                   trailing: const Icon(
                     Icons.chevron_left_rounded,
@@ -123,15 +127,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onTap: () => context.openPrivacyPolicy(),
                 ),
                 const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.language_rounded, color: AppColors.primary),
+                  title: Text(l10n.labelLanguage, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                  trailing: DropdownButton<String>(
+                    value: ref.watch(appLocaleProvider).languageCode,
+                    dropdownColor: AppColors.surfaceLight,
+                    underline: const SizedBox.shrink(),
+                    items: [
+                      DropdownMenuItem(value: 'ar', child: Text(l10n.languageArabic)),
+                      DropdownMenuItem(value: 'en', child: Text(l10n.languageEnglish)),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        ref.read(appLocaleProvider.notifier).setLocale(Locale(v));
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
                 GlassCard(
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'تغيير كلمة المرور',
-                          style: TextStyle(
+                        Text(
+                          l10n.changePassword,
+                          style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
@@ -142,8 +166,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           controller: _currentPasswordController,
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
-                          decoration: const InputDecoration(
-                            hintText: 'كلمة المرور الحالية',
+                          decoration: InputDecoration(
+                            hintText: l10n.hintCurrentPassword,
                             prefixIcon: Icon(
                               Icons.lock_outline,
                               color: AppColors.textHint,
@@ -151,7 +175,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'كلمة المرور الحالية مطلوبة';
+                              return l10n.valCurrentPasswordRequired;
                             }
                             return null;
                           },
@@ -161,8 +185,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           controller: _newPasswordController,
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
-                          decoration: const InputDecoration(
-                            hintText: 'كلمة المرور الجديدة',
+                          decoration: InputDecoration(
+                            hintText: l10n.hintNewPassword,
                             prefixIcon: Icon(
                               Icons.lock_reset_outlined,
                               color: AppColors.textHint,
@@ -170,10 +194,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
-                              return 'كلمة المرور الجديدة مطلوبة';
+                              return l10n.valNewPasswordRequired;
                             }
                             if (value.length < 8) {
-                              return 'كلمة المرور يجب أن تكون 8 أحرف على الأقل';
+                              return l10n.valNewPasswordMin8;
                             }
                             return null;
                           },
@@ -183,8 +207,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           controller: _confirmPasswordController,
                           obscureText: true,
                           style: const TextStyle(color: AppColors.textPrimary),
-                          decoration: const InputDecoration(
-                            hintText: 'تأكيد كلمة المرور الجديدة',
+                          decoration: InputDecoration(
+                            hintText: l10n.hintConfirmNewPassword,
                             prefixIcon: Icon(
                               Icons.verified_user_outlined,
                               color: AppColors.textHint,
@@ -192,7 +216,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           validator: (value) {
                             if (value != _newPasswordController.text) {
-                              return 'كلمتا المرور غير متطابقتين';
+                              return l10n.valPasswordMismatch;
                             }
                             return null;
                           },
@@ -210,7 +234,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text('تحديث كلمة المرور'),
+                                : Text(l10n.updatePasswordButton),
                           ),
                         ),
                       ],
@@ -225,7 +249,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           error: (error, _) => Center(
             child: Text(
-              'خطأ: $error',
+              l10n.errorPrefix(error.toString()),
               style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
@@ -238,6 +262,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    final l10nSnack = context.l10n;
     try {
       await ref.read(authControllerProvider.notifier).changePassword(
             currentPassword: _currentPasswordController.text,
@@ -247,7 +272,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _newPasswordController.clear();
       _confirmPasswordController.clear();
       messenger.showSnackBar(
-        const SnackBar(content: Text('تم تحديث كلمة المرور بنجاح')),
+        SnackBar(content: Text(l10nSnack.passwordChangedSnack)),
       );
       ref.invalidate(currentUserProfileProvider);
     } catch (e) {
@@ -299,10 +324,10 @@ class _ProfileRow extends StatelessWidget {
   }
 }
 
-String _providerLabel(String provider) {
+String _providerLabel(AppLocalizations l10n, String provider) {
   return switch (provider) {
-    'email' => 'الهاتف وكلمة المرور',
-    'google' => 'Google',
+    'email' => l10n.authProviderEmail,
+    'google' => l10n.authProviderGoogle,
     _ => provider,
   };
 }

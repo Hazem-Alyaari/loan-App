@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/core/widgets/status_badge.dart';
@@ -10,6 +11,7 @@ import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/groups/application/providers/group_providers.dart';
 import 'package:loan/features/transactions/application/providers/transaction_providers.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
+import 'package:loan/l10n/app_localizations.dart';
 
 class GroupDetailsScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -37,6 +39,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final groupAsync = ref.watch(groupDetailProvider(widget.groupId));
 
     return Scaffold(
@@ -110,7 +113,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                                     children: [
                                       _headerMetaChip(
                                         icon: Icons.group_outlined,
-                                        text: '${group.memberIds.length} عضو',
+                                        text: l10n.gdMembersCount(group.memberIds.length),
                                       ),
                                       _headerMetaChip(
                                         icon: Icons.payments_outlined,
@@ -136,11 +139,11 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
-                    tabs: const [
-                      Tab(text: 'الأرصدة'),
-                      Tab(text: 'المعاملات'),
-                      Tab(text: 'التحليل'),
-                      Tab(text: 'الأعضاء'),
+                    tabs: [
+                      Tab(text: l10n.gdTabBalances),
+                      Tab(text: l10n.gdTabTransactions),
+                      Tab(text: l10n.gdTabAnalysis),
+                      Tab(text: l10n.gdTabMembers),
                     ],
                   ),
                 ),
@@ -160,7 +163,7 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (err, _) => Center(
-            child: Text('خطأ: $err',
+            child: Text(l10n.errorPrefix('$err'),
                 style: const TextStyle(color: AppColors.textSecondary)),
           ),
         ),
@@ -168,13 +171,14 @@ class _GroupDetailsScreenState extends ConsumerState<GroupDetailsScreen>
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final messenger = ScaffoldMessenger.of(context);
+          final snackL10n = context.l10n;
           final created = await context.push<bool>(
             '/groups/${widget.groupId}/create-transaction',
           );
           if (created == true && mounted) {
             messenger.showSnackBar(
-              const SnackBar(
-                content: Text('تمت إضافة المعاملة بنجاح'),
+              SnackBar(
+                content: Text(snackL10n.gdSnackTxAdded),
               ),
             );
           }
@@ -192,6 +196,7 @@ class _BalancesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final authUser = ref.watch(authStateProvider).value;
     final txAsync = ref.watch(groupTransactionsProvider(groupId));
     final membersAsync = ref.watch(groupMembersProvider(groupId));
@@ -199,9 +204,9 @@ class _BalancesTab extends ConsumerWidget {
     final currentMemberAsync = ref.watch(currentGroupMemberProvider(groupId));
 
     if (authUser == null) {
-      return const Center(
-        child: Text('المستخدم غير مسجل الدخول',
-            style: TextStyle(color: AppColors.textHint)),
+      return Center(
+        child: Text(l10n.userNotLoggedIn,
+            style: const TextStyle(color: AppColors.textHint)),
       );
     }
     final myApprovedTxAsync = ref.watch(
@@ -220,31 +225,31 @@ class _BalancesTab extends ConsumerWidget {
 
     if (groupAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${groupAsync.error}',
+        child: Text(l10n.errorPrefix('${groupAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (membersAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${membersAsync.error}',
+        child: Text(l10n.errorPrefix('${membersAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (currentMemberAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${currentMemberAsync.error}',
+        child: Text(l10n.errorPrefix('${currentMemberAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (myApprovedTxAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${myApprovedTxAsync.error}',
+        child: Text(l10n.errorPrefix('${myApprovedTxAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (txAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${txAsync.error}',
+        child: Text(l10n.errorPrefix('${txAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
@@ -309,10 +314,10 @@ class _BalancesTab extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'رصيدي',
-                      style: TextStyle(
+                      l10n.gdMyBalance,
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -328,7 +333,7 @@ class _BalancesTab extends ConsumerWidget {
                       border: Border.all(color: const Color(0xFF333355)),
                     ),
                     child: Text(
-                      canViewAllBalances ? 'رصيد كل الأعضاء' : 'رصيدك الحالي',
+                      canViewAllBalances ? l10n.gdAllBalances : l10n.gdYourBalanceTitle,
                       style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 11,
@@ -339,9 +344,9 @@ class _BalancesTab extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              const Text(
-                'ملخص واضح لرصيدك الحالي داخل هذه المجموعة',
-                style: TextStyle(
+              Text(
+                l10n.gdYourBalanceSubtitle,
+                style: const TextStyle(
                   color: AppColors.textHint,
                   fontSize: 12,
                 ),
@@ -351,7 +356,7 @@ class _BalancesTab extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: _metricCard(
-                      title: 'لك على الناس',
+                      title: l10n.gdOwedToYou,
                       value: '${myReceivable.toStringAsFixed(2)} ${group.currencyCode}',
                       color: AppColors.success,
                       icon: Icons.south_west_rounded,
@@ -360,7 +365,7 @@ class _BalancesTab extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _metricCard(
-                      title: 'عليك للناس',
+                      title: l10n.gdYouOweOthers,
                       value: '${myPayable.toStringAsFixed(2)} ${group.currencyCode}',
                       color: AppColors.error,
                       icon: Icons.north_east_rounded,
@@ -380,9 +385,9 @@ class _BalancesTab extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    const Text(
-                      'الصافي',
-                      style: TextStyle(
+                    Text(
+                      l10n.gdNet,
+                      style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w700,
                       ),
@@ -405,7 +410,7 @@ class _BalancesTab extends ConsumerWidget {
         Padding(
           padding: EdgeInsets.fromLTRB(12, 10, 12, 6),
           child: Text(
-            canViewAllBalances ? 'أرصدة الأعضاء' : 'رصيدك',
+            canViewAllBalances ? l10n.gdBalancesSection : l10n.gdMyBalance,
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 14,
@@ -414,10 +419,10 @@ class _BalancesTab extends ConsumerWidget {
           ),
         ),
         if (entries.isEmpty)
-          const GlassCard(
+          GlassCard(
             child: Text(
-              'لا توجد أرصدة متاحة حاليا.',
-              style: TextStyle(color: AppColors.textHint),
+              l10n.gdNoBalances,
+              style: const TextStyle(color: AppColors.textHint),
             ),
           ),
         for (final entry in entries)
@@ -461,10 +466,10 @@ class _BalancesTab extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         entry.value > 0
-                            ? 'له على المجموعة'
+                            ? l10n.gdReceivableGroup
                             : entry.value < 0
-                                ? 'عليه للمجموعة'
-                                : 'رصيد متوازن',
+                                ? l10n.gdPayableGroup
+                                : l10n.gdBalanced,
                         style: const TextStyle(
                           color: AppColors.textHint,
                           fontSize: 12,
@@ -473,10 +478,10 @@ class _BalancesTab extends ConsumerWidget {
                       const SizedBox(height: 4),
                       Text(
                         entry.value > 0
-                            ? 'له على المجموعة'
+                            ? l10n.gdReceivableGroup
                             : entry.value < 0
-                                ? 'عليه للمجموعة'
-                                : 'متوازن',
+                                ? l10n.gdPayableGroup
+                                : l10n.gdBalanced,
                         style: const TextStyle(
                           color: AppColors.textHint,
                           fontSize: 12,
@@ -524,7 +529,8 @@ void _showMemberSettlementSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (context) {
+    builder: (sheetContext) {
+      final l10n = sheetContext.l10n;
       return FutureBuilder<List<TransactionModel>>(
         future: future,
         builder: (context, snapshot) {
@@ -541,7 +547,7 @@ void _showMemberSettlementSheet(
               height: 260,
               child: Center(
                 child: Text(
-                  'خطأ: ${snapshot.error}',
+                  l10n.errorPrefix('${snapshot.error}'),
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
@@ -583,7 +589,7 @@ void _showMemberSettlementSheet(
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'تسوية العضو • $memberName',
+                            l10n.gdSettlementMember(memberName),
                             style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 18,
@@ -596,22 +602,22 @@ void _showMemberSettlementSheet(
                     const SizedBox(height: 14),
                     for (final entry in positiveEntries)
                       _settlementRow(
-                        label: 'له على ${memberNameMap[entry.key] ?? entry.key}',
+                        label: l10n.gdOwedBy(memberNameMap[entry.key] ?? entry.key),
                         value: entry.value,
                         currencyCode: currencyCode,
                         color: AppColors.success,
                       ),
                     for (final entry in negativeEntries)
                       _settlementRow(
-                        label: 'عليه لـ ${memberNameMap[entry.key] ?? entry.key}',
+                        label: l10n.gdOwesTo(memberNameMap[entry.key] ?? entry.key),
                         value: entry.value.abs(),
                         currencyCode: currencyCode,
                         color: AppColors.error,
                       ),
                     if (positiveEntries.isEmpty && negativeEntries.isEmpty)
-                      const Text(
-                        'لا توجد تسويات مفتوحة لهذا العضو.',
-                        style: TextStyle(color: AppColors.textHint),
+                      Text(
+                        l10n.gdNoOpenSettlements,
+                        style: const TextStyle(color: AppColors.textHint),
                       ),
                     const SizedBox(height: 16),
                     Container(
@@ -625,24 +631,34 @@ void _showMemberSettlementSheet(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'الملخص',
-                            style: TextStyle(
+                          Text(
+                            l10n.gdSummary,
+                            style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'إجمالي له: ${totalReceivable.toStringAsFixed(2)} $currencyCode',
+                            l10n.gdTotalReceivable(
+                              totalReceivable.toStringAsFixed(2),
+                              currencyCode,
+                            ),
                             style: const TextStyle(color: AppColors.success),
                           ),
                           Text(
-                            'إجمالي عليه: ${totalPayable.toStringAsFixed(2)} $currencyCode',
+                            l10n.gdTotalPayable(
+                              totalPayable.toStringAsFixed(2),
+                              currencyCode,
+                            ),
                             style: const TextStyle(color: AppColors.error),
                           ),
                           Text(
-                            'الصافي: ${net >= 0 ? '+' : ''}${net.toStringAsFixed(2)} $currencyCode',
+                            l10n.gdNetLine(
+                              net >= 0 ? '+' : '',
+                              net.toStringAsFixed(2),
+                              currencyCode,
+                            ),
                             style: TextStyle(
                               color: net >= 0 ? AppColors.success : AppColors.error,
                               fontWeight: FontWeight.w700,
@@ -715,29 +731,33 @@ Widget _settlementRow({
   );
 }
 
-String _settlementTimeRemaining(DateTime expiresAt, DateTime now) {
+String _settlementTimeRemaining(
+  DateTime expiresAt,
+  DateTime now,
+  AppLocalizations l10n,
+) {
   if (expiresAt.isBefore(now)) {
-    return 'انتهت صلاحية الاقتراح — يمكن إعادة الاكتشاف';
+    return l10n.gdProposalExpired;
   }
   final left = expiresAt.difference(now);
   final h = left.inHours;
   final m = left.inMinutes.remainder(60);
   if (h > 0) {
-    return 'متبقي: $h ساعة و $m دقيقة';
+    return l10n.gdProposalLeftH(h, m);
   }
-  return 'متبقي: $m دقيقة';
+  return l10n.gdProposalLeftM(m);
 }
 
-Widget _proposalApprovalPill(String label, String status) {
+Widget _proposalApprovalPill(AppLocalizations l10n, String label, String status) {
   final color = switch (status) {
     'approved' => AppColors.success,
     'rejected' => AppColors.error,
     _ => AppColors.warning,
   };
   final text = switch (status) {
-    'approved' => 'موافق',
-    'rejected' => 'رافض',
-    _ => 'معلّق',
+    'approved' => l10n.voteApproved,
+    'rejected' => l10n.voteRejected,
+    _ => l10n.votePending,
   };
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -773,6 +793,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final authUser = ref.watch(authStateProvider).value;
     final txAsync = ref.watch(groupTransactionsProvider(groupId));
     final currentMemberAsync = ref.watch(currentGroupMemberProvider(groupId));
@@ -781,9 +802,9 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
     final proposalsAsync = ref.watch(groupSettlementProposalsProvider(groupId));
 
     if (authUser == null) {
-      return const Center(
-        child: Text('المستخدم غير مسجل الدخول',
-            style: TextStyle(color: AppColors.textHint)),
+      return Center(
+        child: Text(l10n.userNotLoggedIn,
+            style: const TextStyle(color: AppColors.textHint)),
       );
     }
 
@@ -799,31 +820,31 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
 
     if (txAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${txAsync.error}',
+        child: Text(l10n.errorPrefix('${txAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (currentMemberAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${currentMemberAsync.error}',
+        child: Text(l10n.errorPrefix('${currentMemberAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (groupAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${groupAsync.error}',
+        child: Text(l10n.errorPrefix('${groupAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (membersAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${membersAsync.error}',
+        child: Text(l10n.errorPrefix('${membersAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
     if (proposalsAsync.hasError) {
       return Center(
-        child: Text('خطأ: ${proposalsAsync.error}',
+        child: Text(l10n.errorPrefix('${proposalsAsync.error}'),
             style: const TextStyle(color: AppColors.textSecondary)),
       );
     }
@@ -875,10 +896,10 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'اقتراح تصفية الديون الدائرية',
-                      style: TextStyle(
+                      l10n.gdCircularTitle,
+                      style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
@@ -894,20 +915,20 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                         SnackBar(
                           content: Text(
                             created > 0
-                                ? 'تم إنشاء $created اقتراح/اقتراحات تسوية (صلاحية 12 ساعة)'
-                                : 'لا توجد حلقات جديدة للتسوية حاليا',
+                                ? l10n.gdDiscoverySome(created)
+                                : l10n.gdDiscoveryNone,
                           ),
                         ),
                       );
                     },
-                    child: const Text('اكتشاف'),
+                    child: Text(l10n.gdDiscover),
                   ),
                 ],
               ),
               const SizedBox(height: 6),
-              const Text(
-                'أي عضو يمكنه البحث عن حلقة ديون وإنشاء اقتراح. الاقتراح يظهر لجميع الأعضاء وينتهي تلقائياً بعد 12 ساعة إن لم يكتمل التصويت.',
-                style: TextStyle(
+              Text(
+                l10n.gdSettlementHelp,
+                style: const TextStyle(
                   color: AppColors.textHint,
                   fontSize: 12,
                 ),
@@ -930,7 +951,10 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                   Text(
-                    'اقتراح تسوية • ${proposal.settlementAmount.toStringAsFixed(2)} ${group.currencyCode}',
+                    l10n.gdProposalLine(
+                      proposal.settlementAmount.toStringAsFixed(2),
+                      group.currencyCode,
+                    ),
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -948,7 +972,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _settlementTimeRemaining(proposal.expiresAt, now),
+                    _settlementTimeRemaining(proposal.expiresAt, now, l10n),
                     style: TextStyle(
                       color: proposal.expiresAt.isBefore(now)
                           ? AppColors.error
@@ -964,6 +988,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                     children: proposal.participants
                         .map(
                           (id) => _proposalApprovalPill(
+                            l10n,
                             memberNameMap[id] ?? id,
                             proposal.approvals[id] ?? 'pending',
                           ),
@@ -971,11 +996,11 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                         .toList(),
                   ),
                   if (!isParticipant)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'للاطلاع فقط — التصويت للأطراف المعنية بالحلقة',
-                        style: TextStyle(
+                        l10n.gdReadOnlyVote,
+                        style: const TextStyle(
                           color: AppColors.textHint,
                           fontSize: 12,
                         ),
@@ -997,9 +1022,9 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                                   ),
                               icon: const Icon(Icons.close_rounded,
                                   color: AppColors.error),
-                              label: const Text(
-                                'رفض',
-                                style: TextStyle(color: AppColors.error),
+                              label: Text(
+                                l10n.gdReject,
+                                style: const TextStyle(color: AppColors.error),
                               ),
                             ),
                           ),
@@ -1014,7 +1039,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                                     approve: true,
                                   ),
                               icon: const Icon(Icons.check_rounded),
-                              label: const Text('موافقة'),
+                              label: Text(l10n.gdApprove),
                             ),
                           ),
                         ],
@@ -1026,10 +1051,10 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
             },
           ),
         if (monthEntries.isEmpty)
-          const GlassCard(
+          GlassCard(
             child: Text(
-              'لا توجد معاملات معتمدة للتحليل الشهري (أو لا تظهر لصلاحياتك الحالية)',
-              style: TextStyle(color: AppColors.textHint),
+              l10n.gdAnalysisNoTx,
+              style: const TextStyle(color: AppColors.textHint),
             ),
           ),
         for (final entry in monthEntries)
@@ -1052,7 +1077,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '${entry.value.count} معاملات',
+                      l10n.gdTxCountMonth(entry.value.count),
                       style: const TextStyle(
                         color: AppColors.textHint,
                         fontSize: 12,
@@ -1062,7 +1087,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 _metricCard(
-                  title: 'إجمالي الشهر',
+                  title: l10n.gdMonthlyTotal,
                   value:
                       '${entry.value.totalAmount.toStringAsFixed(2)} ${group.currencyCode}',
                   color: AppColors.info,
@@ -1074,7 +1099,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: _metricCard(
-                          title: 'لك',
+                          title: l10n.gdYouReceived,
                           value:
                               '${entry.value.incoming.toStringAsFixed(2)} ${group.currencyCode}',
                           color: AppColors.success,
@@ -1084,7 +1109,7 @@ class _MonthlyAnalysisTab extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _metricCard(
-                          title: 'عليك',
+                          title: l10n.gdYouPaid,
                           value:
                               '${entry.value.outgoing.toStringAsFixed(2)} ${group.currencyCode}',
                           color: AppColors.error,
@@ -1117,6 +1142,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final membersAsync = ref.watch(groupMembersProvider(widget.groupId));
     final currentMemberAsync = ref.watch(currentGroupMemberProvider(widget.groupId));
     final controllerState = ref.watch(groupControllerProvider);
@@ -1138,7 +1164,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                       child: OutlinedButton.icon(
                         onPressed: isAdding ? null : _showAddMemberDialog,
                         icon: const Icon(Icons.person_add_alt_1_rounded),
-                        label: const Text('عضو جديد'),
+                        label: Text(l10n.gdNewMember),
                       ),
                     ),
                   ],
@@ -1146,10 +1172,10 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
               ),
             Expanded(
               child: members.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'لا يوجد أعضاء',
-                        style: TextStyle(color: AppColors.textHint),
+                        l10n.gdNoMembers,
+                        style: const TextStyle(color: AppColors.textHint),
                       ),
                     )
                   : ListView.builder(
@@ -1214,7 +1240,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                                 ),
                               ),
                               StatusBadge(
-                                label: _memberRoleLabel(member.role),
+                                label: _memberRoleLabel(member.role, l10n),
                                 type: roleType,
                               ),
                             ],
@@ -1230,7 +1256,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
       ),
       error: (e, _) => Center(
         child: Text(
-          'خطأ: $e',
+          l10n.errorPrefix('$e'),
           style: const TextStyle(color: AppColors.textSecondary),
         ),
       ),
@@ -1245,8 +1271,9 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
     final added = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        final dl10n = dialogContext.l10n;
         return AlertDialog(
-          title: const Text('إضافة عضو جديد'),
+          title: Text(dl10n.gdAddMemberTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1257,9 +1284,9 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   LengthLimitingTextInputFormatter(_maxMemberNameLength),
                 ],
                 style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  hintText: 'اسم العضو',
-                  prefixIcon: Icon(
+                decoration: InputDecoration(
+                  hintText: dl10n.gdMemberNameHint,
+                  prefixIcon: const Icon(
                     Icons.person_outline,
                     color: AppColors.textHint,
                   ),
@@ -1274,9 +1301,9 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   LengthLimitingTextInputFormatter(_maxPhoneLength),
                 ],
                 style: const TextStyle(color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  hintText: 'رقم الهاتف',
-                  prefixIcon: Icon(
+                decoration: InputDecoration(
+                  hintText: dl10n.gdPhoneHint,
+                  prefixIcon: const Icon(
                     Icons.phone_outlined,
                     color: AppColors.textHint,
                   ),
@@ -1287,7 +1314,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('إلغاء'),
+              child: Text(dl10n.gdCancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -1295,8 +1322,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                 final phone = phoneController.text.trim();
                 if (name.isEmpty) {
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('اسم العضو مطلوب'),
+                    SnackBar(
+                      content: Text(dl10n.gdValMemberNameRequired),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -1305,8 +1332,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                 if (phone.isEmpty) {
                 if (name.length > _maxMemberNameLength) {
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('اسم العضو طويل جدا'),
+                    SnackBar(
+                      content: Text(dl10n.gdValMemberNameTooLong),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -1314,16 +1341,16 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                 }
                 if (phone.length > _maxPhoneLength) {
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('رقم الهاتف طويل جدا'),
+                    SnackBar(
+                      content: Text(dl10n.gdValPhoneTooLong),
                       backgroundColor: AppColors.error,
                     ),
                   );
                   return;
                 }
                   messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('رقم الهاتف مطلوب'),
+                    SnackBar(
+                      content: Text(dl10n.gdValPhoneRequired),
                       backgroundColor: AppColors.error,
                     ),
                   );
@@ -1348,7 +1375,7 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
                   );
                 }
               },
-              child: const Text('إضافة'),
+              child: Text(dl10n.gdAdd),
             ),
           ],
         );
@@ -1360,8 +1387,8 @@ class _MembersTabState extends ConsumerState<_MembersTab> {
 
     if (added == true && mounted) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('تمت إضافة العضو بنجاح'),
+        SnackBar(
+          content: Text(context.l10n.gdMemberAddedOk),
         ),
       );
     }
@@ -1393,6 +1420,7 @@ class _PaginatedTransactionsListState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final authUser = ref.watch(authStateProvider).value;
     final currentMember = ref.watch(currentGroupMemberProvider(widget.groupId)).value;
     final canViewAllTransactions = switch (currentMember?.role) {
@@ -1427,9 +1455,9 @@ class _PaginatedTransactionsListState
                   value: _selectedUserId,
                   isExpanded: true,
                   dropdownColor: AppColors.surfaceLight,
-                  hint: const Text(
-                    'تصفية حسب المستخدم',
-                    style: TextStyle(color: AppColors.textHint),
+                  hint: Text(
+                    l10n.gdFilterUser,
+                    style: const TextStyle(color: AppColors.textHint),
                   ),
                   style: const TextStyle(
                     color: AppColors.textPrimary,
@@ -1441,9 +1469,9 @@ class _PaginatedTransactionsListState
                     color: AppColors.textHint,
                   ),
                   items: [
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('كل المستخدمين'),
+                      child: Text(l10n.gdAllUsers),
                     ),
                     ...members.map(
                       (m) => DropdownMenuItem<String?>(
@@ -1459,6 +1487,7 @@ class _PaginatedTransactionsListState
           ),
         Expanded(
           child: _buildTransactionsList(
+            context,
             filteredItems,
             canViewAllTransactions: canViewAllTransactions,
           ),
@@ -1468,9 +1497,11 @@ class _PaginatedTransactionsListState
   }
 
   Widget _buildTransactionsList(
+    BuildContext context,
     List<TransactionModel> list, {
     required bool canViewAllTransactions,
   }) {
+    final l10n = context.l10n;
     if (_items.isEmpty && _loading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -1480,10 +1511,10 @@ class _PaginatedTransactionsListState
       return Center(
         child: Text(
           canViewAllTransactions && _selectedUserId == null
-              ? 'لا توجد معاملات بعد'
+              ? l10n.gdNoTx
               : canViewAllTransactions
-                  ? 'لا توجد معاملات لهذا المستخدم'
-                  : 'لا توجد معاملات تخصك حاليا',
+                  ? l10n.gdNoTxUser
+                  : l10n.gdNoTxYou,
           style: const TextStyle(color: AppColors.textHint),
         ),
       );
@@ -1505,7 +1536,7 @@ class _PaginatedTransactionsListState
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('تحميل المزيد'),
+                    : Text(l10n.loadMore),
               ),
             ),
           );
@@ -1550,7 +1581,7 @@ class _PaginatedTransactionsListState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          tx.note.isNotEmpty ? tx.note : _transactionTypeLabel(tx.type),
+                          tx.note.isNotEmpty ? tx.note : _transactionTypeLabel(tx.type, l10n),
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 15,
@@ -1568,9 +1599,9 @@ class _PaginatedTransactionsListState
                               color: AppColors.info.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: const Text(
-                              'تسوية تلقائية',
-                              style: TextStyle(
+                            child: Text(
+                              l10n.gdAutoSettlement,
+                              style: const TextStyle(
                                 color: AppColors.info,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -1601,7 +1632,7 @@ class _PaginatedTransactionsListState
                         ),
                       ),
                       const SizedBox(height: 4),
-                      StatusBadge(label: _statusLabel(tx.status), type: statusType),
+                      StatusBadge(label: _statusLabel(tx.status, l10n), type: statusType),
                     ],
                   ),
                 ],
@@ -1634,28 +1665,28 @@ class _PaginatedTransactionsListState
   }
 }
 
-String _memberRoleLabel(MemberRole role) {
+String _memberRoleLabel(MemberRole role, AppLocalizations l10n) {
   return switch (role) {
-    MemberRole.owner => 'المالك',
-    MemberRole.admin => 'مشرف',
-    MemberRole.member => 'عضو',
+    MemberRole.owner => l10n.roleOwner,
+    MemberRole.admin => l10n.roleAdmin,
+    MemberRole.member => l10n.roleMember,
   };
 }
 
-String _statusLabel(TransactionStatus status) {
+String _statusLabel(TransactionStatus status, AppLocalizations l10n) {
   return switch (status) {
-    TransactionStatus.approved => 'موافق',
-    TransactionStatus.rejected => 'مرفوض',
-    TransactionStatus.pending => 'معلّق',
-    TransactionStatus.cancelled => 'ملغي',
+    TransactionStatus.approved => l10n.statusApproved,
+    TransactionStatus.rejected => l10n.statusRejected,
+    TransactionStatus.pending => l10n.statusPending,
+    TransactionStatus.cancelled => l10n.statusCancelled,
   };
 }
 
-String _transactionTypeLabel(TransactionType type) {
+String _transactionTypeLabel(TransactionType type, AppLocalizations l10n) {
   return switch (type) {
-    TransactionType.loan => 'قرض',
-    TransactionType.repayment => 'سداد',
-    TransactionType.correction => 'تصحيح',
+    TransactionType.loan => l10n.typeLoan,
+    TransactionType.repayment => l10n.typeRepayment,
+    TransactionType.correction => l10n.typeCorrection,
   };
 }
 

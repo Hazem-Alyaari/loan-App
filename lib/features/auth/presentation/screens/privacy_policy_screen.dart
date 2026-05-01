@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 
-/// سياسة خصوصية عامة للتطبيق — يُنصح بمراجعتها مع مستشار قانوني قبل النشر التجاري.
+/// General privacy policy placeholder — have it reviewed legally before commercial release.
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('سياسة الخصوصية'),
+        title: Text(l10n.privacyScreenTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).maybePop(),
@@ -30,7 +32,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'آخر تحديث: ${DateTime.now().year}',
+                  l10n.privacyUpdated(DateTime.now().year),
                   style: const TextStyle(
                     color: AppColors.textHint,
                     fontSize: 13,
@@ -38,52 +40,40 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 _section(
-                  title: '1. مقدمة',
-                  body:
-                      'نلتزم بحماية خصوصيتك. توضح هذه السياسة كيفية جمع واستخدام ومشاركة المعلومات عند استخدام التطبيق (إدارة المجموعات والمعاملات والأرصدة والإشعارات). باستخدامك للتطبيق فإنك توافق على هذه السياسة.',
+                  title: l10n.privacyS1t,
+                  body: l10n.privacyS1b,
                 ),
                 _section(
-                  title: '2. البيانات التي نجمعها',
-                  body:
-                      '• معلومات الحساب: الاسم، رقم الهاتف أو البريد، وبيانات تسجيل الدخول عبر مزودي الهوية (مثل Google) عند تفعيلهم.\n'
-                      '• بيانات المجموعات والمعاملات: المبالغ، الأطراف، الحالات، والملاحظات التي تُدخلها داخل المجموعات.\n'
-                      '• بيانات الجهاز والاستخدام: معرفات تقنية ضرورية لتشغيل الخدمة (مثل معرف المستخدم في النظام الخلفي).\n'
-                      '• الإشعارات: محتوى الإشعارات المتعلقة بالمعاملات والموافقات والتسويات.',
+                  title: l10n.privacyS2t,
+                  body: l10n.privacyS2b,
                 ),
                 _section(
-                  title: '3. أساس الاستخدام',
-                  body:
-                      'نستخدم البيانات لتشغيل التطبيق، وعرض الأرصدة والمعاملات، وإرسال الإشعارات للمستخدمين المعنيين، وتحسين الأمان والاستقرار، والامتثال للالتزامات القانونية عند الاقتضاء.',
+                  title: l10n.privacyS3t,
+                  body: l10n.privacyS3b,
                 ),
                 _section(
-                  title: '4. المشاركة مع أطراف ثالثة',
-                  body:
-                      'قد نعتمد على مزودي خدمات (مثل استضافة البيانات والمصادقة والإشعارات) لمعالجة البيانات نيابةً عنا وفق عقودهم وسياساتهم. لا نبيع بياناتك الشخصية لأطراف ثالثة لأغراض تسويقية.',
+                  title: l10n.privacyS4t,
+                  body: l10n.privacyS4b,
                 ),
                 _section(
-                  title: '5. التخزين والأمان',
-                  body:
-                      'نتخذ تدابير تقنية وتنظيمية معقولة لحماية البيانات. لا يوجد نظام آمن بنسبة 100٪؛ يرجى استخدام كلمة مرور قوية وعدم مشاركة حسابك.',
+                  title: l10n.privacyS5t,
+                  body: l10n.privacyS5b,
                 ),
                 _section(
-                  title: '6. الاحتفاظ بالبيانات',
-                  body:
-                      'نحتفظ بالبيانات طالما كان حسابك نشطًا أو حسب الحاجة لتقديم الخدمة والالتزامات القانونية. يمكنك طلب حذف الحساب وفق إمكانيات التطبيق والقانون المعمول به.',
+                  title: l10n.privacyS6t,
+                  body: l10n.privacyS6b,
                 ),
                 _section(
-                  title: '7. حقوقك',
-                  body:
-                      'حسب القانون المعمول ببلدك، قد يحق لك الوصول إلى بياناتك أو تصحيحها أو حذفها أو تقييد المعالجة. تواصل معنا عبر قنوات الدعم الرسمية للتطبيق.',
+                  title: l10n.privacyS7t,
+                  body: l10n.privacyS7b,
                 ),
                 _section(
-                  title: '8. التحديثات',
-                  body:
-                      'قد نعدّل هذه السياسة من وقت لآخر. سيتم إشعارك بشكل معقول عند التغييرات الجوهرية عندما يقتضي القانون أو التطبيق ذلك.',
+                  title: l10n.privacyS8t,
+                  body: l10n.privacyS8b,
                 ),
                 _section(
-                  title: '9. التواصل',
-                  body:
-                      'للاستفسارات المتعلقة بالخصوصية، يرجى التواصل عبر وسيلة الدعم الرسمية المعلنة في التطبيق أو على صفحة المطوّر.',
+                  title: l10n.privacyS9t,
+                  body: l10n.privacyS9b,
                 ),
               ],
             ),

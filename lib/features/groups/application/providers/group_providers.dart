@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:loan/core/locale/app_locale.dart';
+import 'package:loan/core/locale/bilingual.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/groups/domain/models/group_model.dart';
 import 'package:loan/features/groups/domain/models/group_member.dart';
@@ -65,7 +67,8 @@ class GroupController extends AsyncNotifier<void> {
     GroupModel? result;
     state = await AsyncValue.guard(() async {
       final user = ref.read(authStateProvider).value;
-      if (user == null) throw Exception('المستخدم غير مسجل الدخول');
+      final bx = Bilingual(isArabic: ref.read(appLocaleProvider).languageCode == 'ar');
+      if (user == null) throw Exception(bx.userNotSignedIn);
 
       final profile =
           await ref.read(authRepositoryProvider).getUserProfile(user.uid);
@@ -74,7 +77,7 @@ class GroupController extends AsyncNotifier<void> {
         name: name,
         currencyCode: currencyCode,
         creatorUserId: user.uid,
-        creatorName: profile?.fullName ?? 'مستخدم',
+        creatorName: profile?.fullName ?? bx.genericUser,
         creatorEmail: profile?.email ?? '',
       );
     });

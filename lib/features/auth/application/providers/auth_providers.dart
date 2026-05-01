@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:loan/core/locale/app_locale.dart';
 import 'package:loan/features/auth/domain/models/app_user.dart';
 import 'package:loan/features/auth/domain/repositories/i_auth_repository.dart';
 import 'package:loan/features/auth/infrastructure/repositories/auth_repository.dart';
@@ -20,9 +21,11 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 // Repository provider
 // ---------------------------------------------------------------------------
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
+  final isArabic = ref.watch(appLocaleProvider).languageCode == 'ar';
   return AuthRepository(
     auth: ref.watch(firebaseAuthProvider),
     firestore: ref.watch(firestoreProvider),
+    isArabic: isArabic,
   );
 });
 
@@ -94,11 +97,6 @@ class AuthController extends AsyncNotifier<void> {
       );
     });
     return appUser;
-  }
-
-  Future<void> signInWithGoogle() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _repo.signInWithGoogle());
   }
 
   Future<void> signOut() async {

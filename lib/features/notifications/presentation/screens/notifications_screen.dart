@@ -3,11 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/notifications/application/providers/notification_providers.dart';
 import 'package:loan/features/notifications/domain/models/app_notification.dart';
+import 'package:loan/l10n/app_localizations.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -66,11 +68,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final uid = ref.watch(authStateProvider).value?.uid;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الإشعارات'),
+        title: Text(l10n.notificationsTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -80,7 +83,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             onPressed: () {
               ref.read(notificationControllerProvider.notifier).markAllAsRead();
             },
-            child: const Text('تحديد الكل كمقروء'),
+            child: Text(l10n.markAllRead),
           ),
         ],
       ),
@@ -93,9 +96,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
         ),
         child: uid == null
-            ? const Center(
-                child: Text('المستخدم غير مسجل الدخول',
-                    style: TextStyle(color: AppColors.textSecondary)),
+            ? Center(
+                child: Text(l10n.userNotLoggedIn,
+                    style: const TextStyle(color: AppColors.textSecondary)),
               )
             : _buildBody(),
       ),
@@ -103,6 +106,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = context.l10n;
     if (_items.isEmpty && _loading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -120,18 +124,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               color: AppColors.textHint.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'لا توجد إشعارات',
-              style: TextStyle(
+            Text(
+              l10n.notifEmptyTitle,
+              style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'لا يوجد جديد حاليا',
-              style: TextStyle(
+            Text(
+              l10n.notifEmptySub,
+              style: const TextStyle(
                 color: AppColors.textHint,
                 fontSize: 14,
               ),
@@ -157,14 +161,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('تحميل المزيد'),
+                    : Text(l10n.loadMore),
               ),
             ),
           );
         }
 
         final notif = _items[index];
-        return _NotificationTile(notification: notif);
+        return _NotificationTile(notification: notif, l10n: l10n);
       },
     );
   }
@@ -172,8 +176,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
 class _NotificationTile extends ConsumerWidget {
   final AppNotification notification;
+  final AppLocalizations l10n;
 
-  const _NotificationTile({required this.notification});
+  const _NotificationTile({required this.notification, required this.l10n});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -268,7 +273,7 @@ class _NotificationTile extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  _timeAgo(notification.createdAt),
+                  _timeAgo(notification.createdAt, l10n),
                   style: const TextStyle(
                     color: AppColors.textHint,
                     fontSize: 11,
@@ -282,12 +287,12 @@ class _NotificationTile extends ConsumerWidget {
     );
   }
 
-  String _timeAgo(DateTime date) {
+  String _timeAgo(DateTime date, AppLocalizations l10n) {
     final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inMinutes < 60) return 'قبل ${diff.inMinutes} دقيقة';
-    if (diff.inHours < 24) return 'قبل ${diff.inHours} ساعة';
-    if (diff.inDays < 7) return 'قبل ${diff.inDays} يوم';
-    return '${date.day}/${date.month}/${date.year}';
+    if (diff.inMinutes < 1) return l10n.timeNow;
+    if (diff.inMinutes < 60) return l10n.timeMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.timeHoursAgo(diff.inHours);
+    if (diff.inDays < 7) return l10n.timeDaysAgo(diff.inDays);
+    return l10n.timeDate(date.day, date.month, date.year);
   }
 }

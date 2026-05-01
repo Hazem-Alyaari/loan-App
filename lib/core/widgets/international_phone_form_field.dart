@@ -3,6 +3,7 @@ import 'package:intl_phone_field/country_picker_dialog.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:intl_phone_field/phone_number.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/l10n/app_localizations.dart';
 
 /// حقل هاتف مع اختيار الدولة والتحقق من الطول حسب الدولة (intl_phone_field).
 class InternationalPhoneFormField extends StatelessWidget {
@@ -27,6 +28,7 @@ class InternationalPhoneFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Directionality(
       textDirection: TextDirection.ltr,
       child: IntlPhoneField(
@@ -34,7 +36,7 @@ class InternationalPhoneFormField extends StatelessWidget {
         initialCountryCode: initialCountryCode,
         languageCode: languageCode,
         autovalidateMode: autovalidateMode ?? AutovalidateMode.onUserInteraction,
-        invalidNumberMessage: 'رقم الهاتف غير صالح',
+        invalidNumberMessage: loc.invalidPhone,
         showDropdownIcon: true,
         dropdownIconPosition: IconPosition.trailing,
         style: const TextStyle(color: AppColors.textPrimary),
@@ -48,16 +50,16 @@ class InternationalPhoneFormField extends StatelessWidget {
           backgroundColor: AppColors.surface,
           countryNameStyle: const TextStyle(color: AppColors.textPrimary),
           countryCodeStyle: const TextStyle(color: AppColors.textSecondary),
-          searchFieldInputDecoration: const InputDecoration(
-            hintText: 'البحث عن دولة',
-            hintStyle: TextStyle(color: AppColors.textHint),
+          searchFieldInputDecoration: InputDecoration(
+            hintText: loc.searchCountryHint,
+            hintStyle: const TextStyle(color: AppColors.textHint),
             filled: true,
             fillColor: AppColors.surfaceLight,
           ),
           searchFieldCursorColor: AppColors.primary,
         ),
-        decoration: const InputDecoration(
-          hintText: 'رقم الجوال',
+        decoration: InputDecoration(
+          hintText: loc.mobileHint,
         ),
         onSaved: onSaved,
       ),

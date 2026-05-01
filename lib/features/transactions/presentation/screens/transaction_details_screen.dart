@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/core/theme/app_theme.dart';
+import 'package:loan/l10n/app_localizations.dart';
 import 'package:loan/core/widgets/glass_card.dart';
 import 'package:loan/core/widgets/gradient_button.dart';
 import 'package:loan/core/widgets/status_badge.dart';
@@ -21,6 +23,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final currentUserId = ref.watch(authStateProvider).value?.uid;
     final txAsync = ref.watch(
       transactionDetailProvider(
@@ -30,7 +33,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('تفاصيل المعاملة'),
+        title: Text(l10n.txnDetailTitle),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
@@ -88,12 +91,12 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         StatusBadge(
-                          label: _statusLabel(tx.status),
+                          label: _statusLabel(tx.status, l10n),
                           type: statusType,
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _transactionTypeLabel(tx.type),
+                          _transactionTypeLabel(tx.type, l10n),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 14,
@@ -111,34 +114,34 @@ class TransactionDetailsScreen extends ConsumerWidget {
                       children: [
                         _DetailRow(
                           icon: Icons.person_outline,
-                          label: 'الدائن',
+                          label: l10n.labelCreditor,
                           value: tx.creditorName ?? tx.creditorUserId,
                         ),
                         const Divider(color: Color(0xFF2A2A45)),
                         _DetailRow(
                           icon: Icons.person_outline,
-                          label: 'المدين',
+                          label: l10n.labelDebtor,
                           value: tx.debtorName ?? tx.debtorUserId,
                         ),
                         if (tx.note.isNotEmpty) ...[
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.notes_outlined,
-                            label: 'الملاحظة',
+                            label: l10n.labelNote,
                             value: tx.note,
                           ),
                         ],
                         const Divider(color: Color(0xFF2A2A45)),
                         _DetailRow(
                           icon: Icons.calendar_today_outlined,
-                          label: 'تاريخ الإنشاء',
+                          label: l10n.labelCreatedAt,
                           value: _formatDate(tx.createdAt),
                         ),
                         if (tx.approvedAt != null) ...[
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.check_circle_outline,
-                            label: 'تاريخ الموافقة',
+                            label: l10n.labelApprovedAt,
                             value: _formatDate(tx.approvedAt!),
                           ),
                         ],
@@ -146,7 +149,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                           const Divider(color: Color(0xFF2A2A45)),
                           _DetailRow(
                             icon: Icons.cancel_outlined,
-                            label: 'تاريخ الرفض',
+                            label: l10n.labelRejectedAt,
                             value: _formatDate(tx.rejectedAt!),
                           ),
                         ],
@@ -159,7 +162,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   if (tx.status == TransactionStatus.pending &&
                       currentUserId == tx.debtorUserId) ...[
                     GradientButton(
-                      text: 'موافقة',
+                      text: l10n.approve,
                       icon: Icons.check_rounded,
                       onPressed: () {
                         ref
@@ -178,8 +181,8 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         },
                         icon: const Icon(Icons.close_rounded,
                             color: AppColors.error),
-                        label: const Text('رفض',
-                            style: TextStyle(color: AppColors.error)),
+                        label: Text(l10n.reject,
+                            style: const TextStyle(color: AppColors.error)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           side: const BorderSide(color: AppColors.error),
@@ -190,11 +193,11 @@ class TransactionDetailsScreen extends ConsumerWidget {
                       ),
                     ),
                   ] else if (tx.status == TransactionStatus.pending) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text(
-                        'الموافقة أو الرفض متاح للمدين فقط',
-                        style: TextStyle(
+                        l10n.debtorOnlyActions,
+                        style: const TextStyle(
                           color: AppColors.textHint,
                           fontSize: 13,
                         ),
@@ -210,7 +213,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
           error: (e, _) => Center(
-            child: Text('خطأ: $e',
+            child: Text(l10n.txnError(e.toString()),
                 style: const TextStyle(color: AppColors.textSecondary)),
           ),
         ),
@@ -223,20 +226,20 @@ class TransactionDetailsScreen extends ConsumerWidget {
   }
 }
 
-String _statusLabel(TransactionStatus status) {
+String _statusLabel(TransactionStatus status, AppLocalizations l10n) {
   return switch (status) {
-    TransactionStatus.approved => 'موافق',
-    TransactionStatus.rejected => 'مرفوض',
-    TransactionStatus.pending => 'معلّق',
-    TransactionStatus.cancelled => 'ملغي',
+    TransactionStatus.approved => l10n.statusApproved,
+    TransactionStatus.rejected => l10n.statusRejected,
+    TransactionStatus.pending => l10n.statusPending,
+    TransactionStatus.cancelled => l10n.statusCancelled,
   };
 }
 
-String _transactionTypeLabel(TransactionType type) {
+String _transactionTypeLabel(TransactionType type, AppLocalizations l10n) {
   return switch (type) {
-    TransactionType.loan => 'قرض',
-    TransactionType.repayment => 'سداد',
-    TransactionType.correction => 'تصحيح',
+    TransactionType.loan => l10n.typeLoan,
+    TransactionType.repayment => l10n.typeRepayment,
+    TransactionType.correction => l10n.typeCorrection,
   };
 }
 

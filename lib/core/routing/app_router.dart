@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:loan/core/locale/l10n_context.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/auth/presentation/screens/login_screen.dart';
 import 'package:loan/features/auth/presentation/screens/privacy_policy_screen.dart';
@@ -110,7 +111,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Text(
-          'الصفحة غير موجودة: ${state.error}',
+          context.l10n.routerNotFound(state.error?.toString() ?? ''),
           style: const TextStyle(color: Colors.white),
         ),
       ),

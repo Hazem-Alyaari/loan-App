@@ -1,0 +1,373 @@
+{
+  "@@locale": "ar",
+  "appTitle": "لون تراك",
+  "errorPrefix": "خطأ: {details}",
+  "@errorPrefix": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "userNotLoggedIn": "المستخدم غير مسجل الدخول",
+  "loginWelcomeBack": "أهلا بعودتك",
+  "loginSubtitle": "سجّل الدخول لإدارة المصروفات الجماعية",
+  "hintPassword": "كلمة المرور",
+  "valPasswordRequired": "كلمة المرور مطلوبة",
+  "valPasswordMin6": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+  "forgotPassword": "هل نسيت كلمة المرور؟",
+  "signIn": "تسجيل الدخول",
+  "noAccount": "ليس لديك حساب؟ ",
+  "createAccountLink": "إنشاء حساب",
+  "privacyPolicy": "سياسة الخصوصية",
+  "snackPhoneRequired": "رقم الهاتف مطلوب",
+  "registerTitle": "إنشاء حساب",
+  "registerSubtitle": "ابدأ إدارة مصروفات مجموعتك اليوم",
+  "hintFullName": "الاسم الكامل",
+  "valNameRequired": "الاسم مطلوب",
+  "hintConfirmPassword": "تأكيد كلمة المرور",
+  "valPasswordMismatch": "كلمتا المرور غير متطابقتين",
+  "createAccountBtn": "إنشاء الحساب",
+  "haveAccount": "لديك حساب بالفعل؟ ",
+  "signInLink": "تسجيل الدخول",
+  "profileTitle": "ملفي الشخصي",
+  "profileMissing": "تعذر العثور على الملف الشخصي",
+  "labelPhone": "الهاتف",
+  "labelAuthMethod": "طريقة تسجيل الدخول",
+  "defaultPasswordBanner": "حسابك يستخدم كلمة المرور الافتراضية. يرجى تغييرها الآن.",
+  "privacyRelated": "سياسة الخصوصية",
+  "privacyRelatedSub": "اطّلع على كيفية استخدام بياناتك",
+  "changePassword": "تغيير كلمة المرور",
+  "hintCurrentPassword": "كلمة المرور الحالية",
+  "hintNewPassword": "كلمة المرور الجديدة",
+  "savePassword": "حفظ كلمة المرور",
+  "passwordChangedSnack": "تم تحديث كلمة المرور",
+  "valCurrentPasswordRequired": "كلمة المرور الحالية مطلوبة",
+  "valNewPasswordRequired": "كلمة المرور الجديدة مطلوبة",
+  "valNewPasswordMin8": "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+  "hintConfirmNewPassword": "تأكيد كلمة المرور الجديدة",
+  "updatePasswordButton": "تحديث كلمة المرور",
+  "authProviderEmail": "الهاتف وكلمة المرور",
+  "authProviderGoogle": "Google",
+  "labelLanguage": "اللغة",
+  "languageArabic": "العربية",
+  "languageEnglish": "English",
+  "groupsTitle": "مجموعاتي",
+  "groupsSubtitle": "إدارة المصروفات الجماعية",
+  "emptyGroupsTitle": "لا توجد مجموعات بعد",
+  "emptyGroupsHint": "أنشئ أول مجموعة للبدء",
+  "newGroupFab": "مجموعة جديدة",
+  "membersCountLine": "{count} عضو • {currency}",
+  "@membersCountLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "createGroupTitle": "إنشاء مجموعة",
+  "groupNameLabel": "اسم المجموعة",
+  "groupNameHint": "مثال: رحلة نهاية الأسبوع",
+  "valGroupNameRequired": "اسم المجموعة مطلوب",
+  "valGroupNameTooLong": "اسم المجموعة طويل جدا",
+  "currencyLabel": "العملة",
+  "createGroupBtn": "إنشاء المجموعة",
+  "notificationsTitle": "الإشعارات",
+  "markAllRead": "تحديد الكل كمقروء",
+  "notifEmptyTitle": "لا توجد إشعارات",
+  "notifEmptySub": "لا يوجد جديد حاليا",
+  "loadMore": "تحميل المزيد",
+  "timeNow": "الآن",
+  "timeMinutesAgo": "قبل {count} دقيقة",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "قبل {count} ساعة",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "قبل {count} يوم",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDate": "{day}/{month}/{year}",
+  "@timeDate": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyScreenTitle": "سياسة الخصوصية",
+  "privacyUpdated": "آخر تحديث: {year}",
+  "@privacyUpdated": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyS1t": "1. مقدمة",
+  "privacyS1b": "نلتزم بحماية خصوصيتك. توضح هذه السياسة كيفية جمع واستخدام ومشاركة المعلومات عند استخدام التطبيق (إدارة المجموعات والمعاملات والأرصدة والإشعارات). باستخدامك للتطبيق فإنك توافق على هذه السياسة.",
+  "privacyS2t": "2. البيانات التي نجمعها",
+  "privacyS2b": "• معلومات الحساب: الاسم، رقم الهاتف أو البريد، وبيانات تسجيل الدخول عبر مزودي الهوية (مثل Google) عند تفعيلهم.\n• بيانات المجموعات والمعاملات: المبالغ، الأطراف، الحالات، والملاحظات التي تُدخلها داخل المجموعات.\n• بيانات الجهاز والاستخدام: معرفات تقنية ضرورية لتشغيل الخدمة (مثل معرف المستخدم في النظام الخلفي).\n• الإشعارات: محتوى الإشعارات المتعلقة بالمعاملات والموافقات والتسويات.",
+  "privacyS3t": "3. أساس الاستخدام",
+  "privacyS3b": "نستخدم البيانات لتشغيل التطبيق، وعرض الأرصدة والمعاملات، وإرسال الإشعارات للمستخدمين المعنيين، وتحسين الأمان والاستقرار، والامتثال للالتزامات القانونية عند الاقتضاء.",
+  "privacyS4t": "4. المشاركة مع أطراف ثالثة",
+  "privacyS4b": "قد نعتمد على مزودي خدمات (مثل استضافة البيانات والمصادقة والإشعارات) لمعالجة البيانات نيابةً عنا وفق عقودهم وسياساتهم. لا نبيع بياناتك الشخصية لأطراف ثالثة لأغراض تسويقية.",
+  "privacyS5t": "5. التخزين والأمان",
+  "privacyS5b": "نتخذ تدابير تقنية وتنظيمية معقولة لحماية البيانات. لا يوجد نظام آمن بنسبة 100٪؛ يرجى استخدام كلمة مرور قوية وعدم مشاركة حسابك.",
+  "privacyS6t": "6. الاحتفاظ بالبيانات",
+  "privacyS6b": "نحتفظ بالبيانات طالما كان حسابك نشطًا أو حسب الحاجة لتقديم الخدمة والالتزامات القانونية. يمكنك طلب حذف الحساب وفق إمكانيات التطبيق والقانون المعمول به.",
+  "privacyS7t": "7. حقوقك",
+  "privacyS7b": "حسب القانون المعمول ببلدك، قد يحق لك الوصول إلى بياناتك أو تصحيحها أو حذفها أو تقييد المعالجة. تواصل معنا عبر قنوات الدعم الرسمية للتطبيق.",
+  "privacyS8t": "8. التحديثات",
+  "privacyS8b": "قد نعدّل هذه السياسة من وقت لآخر. سيتم إشعارك بشكل معقول عند التغييرات الجوهرية عندما يقتضي القانون أو التطبيق ذلك.",
+  "privacyS9t": "9. التواصل",
+  "privacyS9b": "للاستفسارات المتعلقة بالخصوصية، يرجى التواصل عبر وسيلة الدعم الرسمية المعلنة في التطبيق أو على صفحة المطوّر.",
+  "routerNotFound": "الصفحة غير موجودة: {error}",
+  "@routerNotFound": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidPhone": "رقم الهاتف غير صالح",
+  "searchCountryHint": "البحث عن دولة",
+  "mobileHint": "رقم الجوال",
+  "txnNewTitle": "معاملة جديدة",
+  "txnType": "النوع",
+  "amountLabel": "المبلغ",
+  "amountHint": "0.00",
+  "valAmountRequired": "المبلغ مطلوب",
+  "valAmountInvalid": "أدخل مبلغا صحيحا",
+  "amountNegativeHint": "إذا كان المبلغ سالبا سيتم عكس الدائن والمدين تلقائيا",
+  "creditorLabel": "الدائن (المقرض)",
+  "creditorHint": "الدائن الحالي",
+  "debtorLabel": "المدين (المقترض)",
+  "debtorHint": "اختر المدين",
+  "noteLabel": "ملاحظة (اختياري)",
+  "noteHint": "ملاحظة عن سبب المعاملة",
+  "createTxnBtn": "إنشاء المعاملة",
+  "me": "أنا",
+  "txnError": "خطأ: {e}",
+  "@txnError": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
+  "pickDebtorSnack": "يرجى اختيار المدين",
+  "selfDebtorSnack": "لا يمكن اختيار نفسك كمدين",
+  "noteTooLongSnack": "النص طويل جدا، الحد الأقصى للملاحظة 250 حرف",
+  "txnDetailTitle": "تفاصيل المعاملة",
+  "labelCreditor": "الدائن",
+  "labelDebtor": "المدين",
+  "labelNote": "الملاحظة",
+  "labelCreatedAt": "تاريخ الإنشاء",
+  "labelApprovedAt": "تاريخ الموافقة",
+  "labelRejectedAt": "تاريخ الرفض",
+  "approve": "موافقة",
+  "reject": "رفض",
+  "debtorOnlyActions": "الموافقة أو الرفض متاح للمدين فقط",
+  "roleOwner": "المالك",
+  "roleAdmin": "مشرف",
+  "roleMember": "عضو",
+  "statusApproved": "موافق",
+  "statusRejected": "مرفوض",
+  "statusPending": "معلّق",
+  "statusCancelled": "ملغي",
+  "typeLoan": "قرض",
+  "typeRepayment": "سداد",
+  "typeCorrection": "تصحيح",
+  "gdTabBalances": "الأرصدة",
+  "gdTabTransactions": "المعاملات",
+  "gdTabAnalysis": "التحليل",
+  "gdTabMembers": "الأعضاء",
+  "gdMembersCount": "{count} عضو",
+  "@gdMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdSnackTxAdded": "تمت إضافة المعاملة بنجاح",
+  "gdMyBalance": "رصيدي",
+  "gdAllBalances": "رصيد كل الأعضاء",
+  "gdYourBalanceTitle": "رصيدك الحالي",
+  "gdYourBalanceSubtitle": "ملخص واضح لرصيدك الحالي داخل هذه المجموعة",
+  "gdOwedToYou": "لك على الناس",
+  "gdYouOweOthers": "عليك للناس",
+  "gdNet": "الصافي",
+  "gdBalancesSection": "الأرصدة",
+  "gdNoBalances": "لا توجد أرصدة متاحة حاليا.",
+  "gdReceivableGroup": "له على المجموعة",
+  "gdPayableGroup": "عليه للمجموعة",
+  "gdBalanced": "رصيد متوازن",
+  "gdSettlementMember": "تسوية العضو • {name}",
+  "@gdSettlementMember": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdOwesTo": "عليه لـ {name}",
+  "@gdOwesTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdOwedBy": "له على {name}",
+  "@gdOwedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdNoOpenSettlements": "لا توجد تسويات مفتوحة لهذا العضو.",
+  "gdSummary": "الملخص",
+  "gdTotalReceivable": "إجمالي له: {amount} {currency}",
+  "@gdTotalReceivable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdTotalPayable": "إجمالي عليه: {amount} {currency}",
+  "@gdTotalPayable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdNetLine": "الصافي: {sign}{amount} {currency}",
+  "@gdNetLine": {
+    "placeholders": {
+      "sign": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdProposalExpired": "انتهت صلاحية الاقتراح — يمكن إعادة الاكتشاف",
+  "gdProposalLeftH": "متبقي: {h} ساعة و {m} دقيقة",
+  "@gdProposalLeftH": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "gdProposalLeftM": "متبقي: {m} دقيقة",
+  "@gdProposalLeftM": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "voteApproved": "موافق",
+  "voteRejected": "رافض",
+  "votePending": "معلّق",
+  "gdCircularTitle": "اقتراح تصفية الديون الدائرية",
+  "gdDiscoverySome": "تم إنشاء {count} اقتراح/اقتراحات تسوية (صلاحية 12 ساعة)",
+  "@gdDiscoverySome": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdDiscoveryNone": "لا توجد حلقات جديدة للتسوية حاليا",
+  "gdDiscover": "اكتشاف",
+  "gdSettlementHelp": "أي عضو يمكنه البحث عن حلقة ديون وإنشاء اقتراح. الاقتراح يظهر لجميع الأعضاء وينتهي تلقائياً بعد 12 ساعة إن لم يكتمل التصويت.",
+  "gdProposalLine": "اقتراح تسوية • {amount} {currency}",
+  "@gdProposalLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdReadOnlyVote": "للاطلاع فقط — التصويت للأطراف المعنية بالحلقة",
+  "gdReject": "رفض",
+  "gdApprove": "موافقة",
+  "gdAnalysisNoTx": "لا توجد معاملات معتمدة للتحليل الشهري (أو لا تظهر لصلاحياتك الحالية)",
+  "gdTxCountMonth": "{count} معاملات",
+  "@gdTxCountMonth": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdMonthlyTotal": "إجمالي الشهر",
+  "gdYouReceived": "لك",
+  "gdYouPaid": "عليك",
+  "gdNewMember": "عضو جديد",
+  "gdNoMembers": "لا يوجد أعضاء",
+  "gdAddMemberTitle": "إضافة عضو جديد",
+  "gdMemberNameHint": "اسم العضو",
+  "gdPhoneHint": "رقم الهاتف",
+  "gdCancel": "إلغاء",
+  "gdAdd": "إضافة",
+  "gdValMemberNameRequired": "اسم العضو مطلوب",
+  "gdValMemberNameTooLong": "اسم العضو طويل جدا",
+  "gdValPhoneTooLong": "رقم الهاتف طويل جدا",
+  "gdValPhoneRequired": "رقم الهاتف مطلوب",
+  "gdMemberAddedOk": "تمت إضافة العضو بنجاح",
+  "gdFilterUser": "تصفية حسب المستخدم",
+  "gdAllUsers": "كل المستخدمين",
+  "gdNoTx": "لا توجد معاملات بعد",
+  "gdNoTxUser": "لا توجد معاملات لهذا المستخدم",
+  "gdNoTxYou": "لا توجد معاملات تخصك حاليا",
+  "gdAutoSettlement": "تسوية تلقائية",
+  "gdSettlementTitle": "تسوية"
+}

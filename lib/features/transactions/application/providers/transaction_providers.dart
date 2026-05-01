@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:loan/core/enums/enums.dart';
+import 'package:loan/core/locale/app_locale.dart';
 import 'package:loan/features/auth/application/providers/auth_providers.dart';
 import 'package:loan/features/transactions/domain/models/settlement_proposal.dart';
 import 'package:loan/features/transactions/domain/models/transaction_model.dart';
@@ -10,7 +11,11 @@ import 'package:loan/features/transactions/infrastructure/repositories/transacti
 // Repository provider
 // ---------------------------------------------------------------------------
 final transactionRepositoryProvider = Provider<ITransactionRepository>((ref) {
-  return TransactionRepository(firestore: ref.watch(firestoreProvider));
+  final isArabic = ref.watch(appLocaleProvider).languageCode == 'ar';
+  return TransactionRepository(
+    firestore: ref.watch(firestoreProvider),
+    isArabic: isArabic,
+  );
 });
 
 // ---------------------------------------------------------------------------

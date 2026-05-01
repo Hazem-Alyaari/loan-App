@@ -1,0 +1,373 @@
+{
+  "@@locale": "en",
+  "appTitle": "Loan Track",
+  "errorPrefix": "Error: {details}",
+  "@errorPrefix": {
+    "placeholders": {
+      "details": {
+        "type": "String"
+      }
+    }
+  },
+  "userNotLoggedIn": "You are not signed in",
+  "loginWelcomeBack": "Welcome back",
+  "loginSubtitle": "Sign in to manage shared expenses",
+  "hintPassword": "Password",
+  "valPasswordRequired": "Password is required",
+  "valPasswordMin6": "Password must be at least 6 characters",
+  "forgotPassword": "Forgot password?",
+  "signIn": "Sign in",
+  "noAccount": "Don't have an account? ",
+  "createAccountLink": "Create account",
+  "privacyPolicy": "Privacy policy",
+  "snackPhoneRequired": "Phone number is required",
+  "registerTitle": "Create account",
+  "registerSubtitle": "Start managing your group expenses today",
+  "hintFullName": "Full name",
+  "valNameRequired": "Name is required",
+  "hintConfirmPassword": "Confirm password",
+  "valPasswordMismatch": "Passwords do not match",
+  "createAccountBtn": "Create account",
+  "haveAccount": "Already have an account? ",
+  "signInLink": "Sign in",
+  "profileTitle": "My profile",
+  "profileMissing": "Profile could not be loaded",
+  "labelPhone": "Phone",
+  "labelAuthMethod": "Sign-in method",
+  "defaultPasswordBanner": "Your account uses the default password. Please change it now.",
+  "privacyRelated": "Privacy policy",
+  "privacyRelatedSub": "See how your data is used",
+  "changePassword": "Change password",
+  "hintCurrentPassword": "Current password",
+  "hintNewPassword": "New password",
+  "savePassword": "Save password",
+  "passwordChangedSnack": "Password updated",
+  "valCurrentPasswordRequired": "Current password is required",
+  "valNewPasswordRequired": "New password is required",
+  "valNewPasswordMin8": "New password must be at least 8 characters",
+  "hintConfirmNewPassword": "Confirm new password",
+  "updatePasswordButton": "Update password",
+  "authProviderEmail": "Phone and password",
+  "authProviderGoogle": "Google",
+  "labelLanguage": "Language",
+  "languageArabic": "Arabic",
+  "languageEnglish": "English",
+  "groupsTitle": "My groups",
+  "groupsSubtitle": "Manage shared expenses",
+  "emptyGroupsTitle": "No groups yet",
+  "emptyGroupsHint": "Create your first group to get started",
+  "newGroupFab": "New group",
+  "membersCountLine": "{count} members • {currency}",
+  "@membersCountLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "createGroupTitle": "Create group",
+  "groupNameLabel": "Group name",
+  "groupNameHint": "e.g. Weekend trip",
+  "valGroupNameRequired": "Group name is required",
+  "valGroupNameTooLong": "Group name is too long",
+  "currencyLabel": "Currency",
+  "createGroupBtn": "Create group",
+  "notificationsTitle": "Notifications",
+  "markAllRead": "Mark all as read",
+  "notifEmptyTitle": "No notifications",
+  "notifEmptySub": "Nothing new right now",
+  "loadMore": "Load more",
+  "timeNow": "Just now",
+  "timeMinutesAgo": "{count} minutes ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDate": "{day}/{month}/{year}",
+  "@timeDate": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyScreenTitle": "Privacy policy",
+  "privacyUpdated": "Last updated: {year}",
+  "@privacyUpdated": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "privacyS1t": "1. Introduction",
+  "privacyS1b": "We respect your privacy. This policy explains how we collect, use, and share information when you use the app (groups, transactions, balances, and notifications). By using the app you agree to this policy.",
+  "privacyS2t": "2. Data we collect",
+  "privacyS2b": "• Account: name, phone or email, and sign-in via identity providers (e.g. Google) when enabled.\n• Groups & transactions: amounts, parties, statuses, and notes you enter.\n• Device & usage: technical identifiers needed to run the service.\n• Notifications: content related to transactions, approvals, and settlements.",
+  "privacyS3t": "3. How we use data",
+  "privacyS3b": "We use data to run the app, show balances and transactions, send notifications to affected users, improve security and stability, and comply with legal obligations when required.",
+  "privacyS4t": "4. Third parties",
+  "privacyS4b": "We may rely on providers (hosting, authentication, notifications) to process data under their terms. We do not sell your personal data for marketing.",
+  "privacyS5t": "5. Storage & security",
+  "privacyS5b": "We apply reasonable technical and organizational measures. No system is 100% secure—use a strong password and do not share your account.",
+  "privacyS6t": "6. Retention",
+  "privacyS6b": "We keep data while your account is active or as needed to provide the service and meet legal duties. You may request deletion subject to product and legal limits.",
+  "privacyS7t": "7. Your rights",
+  "privacyS7b": "Depending on your jurisdiction, you may access, correct, delete, or restrict processing. Contact official support channels.",
+  "privacyS8t": "8. Updates",
+  "privacyS8b": "We may update this policy from time to time. Material changes will be communicated as required by law or the product.",
+  "privacyS9t": "9. Contact",
+  "privacyS9b": "For privacy questions, contact the official support channel listed in the app or developer page.",
+  "routerNotFound": "Page not found: {error}",
+  "@routerNotFound": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "invalidPhone": "Invalid phone number",
+  "searchCountryHint": "Search country",
+  "mobileHint": "Mobile number",
+  "txnNewTitle": "New transaction",
+  "txnType": "Type",
+  "amountLabel": "Amount",
+  "amountHint": "0.00",
+  "valAmountRequired": "Amount is required",
+  "valAmountInvalid": "Enter a valid amount",
+  "amountNegativeHint": "If the amount is negative, creditor and debtor will swap automatically",
+  "creditorLabel": "Creditor (lender)",
+  "creditorHint": "Current creditor",
+  "debtorLabel": "Debtor (borrower)",
+  "debtorHint": "Choose debtor",
+  "noteLabel": "Note (optional)",
+  "noteHint": "Note about this transaction",
+  "createTxnBtn": "Create transaction",
+  "me": "Me",
+  "txnError": "Error: {e}",
+  "@txnError": {
+    "placeholders": {
+      "e": {
+        "type": "String"
+      }
+    }
+  },
+  "pickDebtorSnack": "Please choose a debtor",
+  "selfDebtorSnack": "You cannot choose yourself as debtor",
+  "noteTooLongSnack": "Note is too long (max 250 characters)",
+  "txnDetailTitle": "Transaction details",
+  "labelCreditor": "Creditor",
+  "labelDebtor": "Debtor",
+  "labelNote": "Note",
+  "labelCreatedAt": "Created at",
+  "labelApprovedAt": "Approved at",
+  "labelRejectedAt": "Rejected at",
+  "approve": "Approve",
+  "reject": "Reject",
+  "debtorOnlyActions": "Only the debtor can approve or reject",
+  "roleOwner": "Owner",
+  "roleAdmin": "Admin",
+  "roleMember": "Member",
+  "statusApproved": "Approved",
+  "statusRejected": "Rejected",
+  "statusPending": "Pending",
+  "statusCancelled": "Cancelled",
+  "typeLoan": "Loan",
+  "typeRepayment": "Repayment",
+  "typeCorrection": "Correction",
+  "gdTabBalances": "Balances",
+  "gdTabTransactions": "Transactions",
+  "gdTabAnalysis": "Analysis",
+  "gdTabMembers": "Members",
+  "gdMembersCount": "{count} members",
+  "@gdMembersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdSnackTxAdded": "Transaction added",
+  "gdMyBalance": "My balance",
+  "gdAllBalances": "Everyone's balances",
+  "gdYourBalanceTitle": "Your current balance",
+  "gdYourBalanceSubtitle": "A clear summary of your position in this group",
+  "gdOwedToYou": "Owed to you",
+  "gdYouOweOthers": "You owe others",
+  "gdNet": "Net",
+  "gdBalancesSection": "Balances",
+  "gdNoBalances": "No balances to show yet.",
+  "gdReceivableGroup": "Receivable from group",
+  "gdPayableGroup": "Payable to group",
+  "gdBalanced": "Balanced",
+  "gdSettlementMember": "Member settlement • {name}",
+  "@gdSettlementMember": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdOwesTo": "Owes to {name}",
+  "@gdOwesTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdOwedBy": "Owed by {name}",
+  "@gdOwedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "gdNoOpenSettlements": "No open settlements for this member.",
+  "gdSummary": "Summary",
+  "gdTotalReceivable": "Total receivable: {amount} {currency}",
+  "@gdTotalReceivable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdTotalPayable": "Total payable: {amount} {currency}",
+  "@gdTotalPayable": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdNetLine": "Net: {sign}{amount} {currency}",
+  "@gdNetLine": {
+    "placeholders": {
+      "sign": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdProposalExpired": "Proposal expired — you can run discovery again",
+  "gdProposalLeftH": "Time left: {h} h {m} min",
+  "@gdProposalLeftH": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "gdProposalLeftM": "Time left: {m} min",
+  "@gdProposalLeftM": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "voteApproved": "Approved",
+  "voteRejected": "Rejected",
+  "votePending": "Pending",
+  "gdCircularTitle": "Circular debt settlement",
+  "gdDiscoverySome": "{count} settlement proposal(s) created (12h validity)",
+  "@gdDiscoverySome": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdDiscoveryNone": "No new settlement cycles right now",
+  "gdDiscover": "Discover",
+  "gdSettlementHelp": "Any member can find a debt cycle and create a proposal. Everyone sees it; it expires after 12h if voting is incomplete.",
+  "gdProposalLine": "Settlement • {amount} {currency}",
+  "@gdProposalLine": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "currency": {
+        "type": "String"
+      }
+    }
+  },
+  "gdReadOnlyVote": "Read-only — voting is for participants in the cycle",
+  "gdReject": "Reject",
+  "gdApprove": "Approve",
+  "gdAnalysisNoTx": "No approved transactions for monthly analysis (or hidden by your permissions)",
+  "gdTxCountMonth": "{count} transactions",
+  "@gdTxCountMonth": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gdMonthlyTotal": "Month total",
+  "gdYouReceived": "You received",
+  "gdYouPaid": "You paid",
+  "gdNewMember": "New member",
+  "gdNoMembers": "No members",
+  "gdAddMemberTitle": "Add member",
+  "gdMemberNameHint": "Member name",
+  "gdPhoneHint": "Phone number",
+  "gdCancel": "Cancel",
+  "gdAdd": "Add",
+  "gdValMemberNameRequired": "Member name is required",
+  "gdValMemberNameTooLong": "Member name is too long",
+  "gdValPhoneTooLong": "Phone number is too long",
+  "gdValPhoneRequired": "Phone number is required",
+  "gdMemberAddedOk": "Member added successfully",
+  "gdFilterUser": "Filter by user",
+  "gdAllUsers": "All users",
+  "gdNoTx": "No transactions yet",
+  "gdNoTxUser": "No transactions for this user",
+  "gdNoTxYou": "No transactions for you right now",
+  "gdAutoSettlement": "Auto settlement",
+  "gdSettlementTitle": "Settlement"
+}
